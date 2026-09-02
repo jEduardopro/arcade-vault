@@ -32,6 +32,8 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ...except the template, which carries no real values (SPEC 03).
+!.env.example
 
 # vercel
 .vercel
@@ -44,3 +46,4 @@ next-env.d.ts
 !.playwright-mcp/.gitkeep
 
 .env
+.env.local

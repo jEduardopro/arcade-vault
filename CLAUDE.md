@@ -31,6 +31,21 @@ including how to run a single test.
 Type checking has no dedicated script — `next build` type-checks, or run
 `npx tsc --noEmit` for a faster check.
 
+## Environment variables
+
+The contact form on `/about` (SPEC 03) is the only feature that talks to a third party.
+Copy `.env.example` to `.env.local` and fill it in:
+
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `RESEND_API_KEY` | In production | Resend API key. Missing outside production, the server action skips Resend, logs the message and reports success, so the screen is demoable without an account. Missing in production, the form returns an error. |
+| `CONTACT_TO_EMAIL` | Yes | Mailbox that receives the messages. |
+| `CONTACT_FROM_EMAIL` | Yes | Sender, e.g. `Arcade Vault <hello@example.com>`. The domain must be verified in Resend. |
+
+None of them is prefixed with `NEXT_PUBLIC_`: they are read only inside
+`app/actions/contact.ts`, so they never reach the browser. `.gitignore` ignores `.env*`
+but keeps `.env.example`, which must never hold real values.
+
 ## Skills
 Usa siempre /frontend-design para diseñar la interfaz de usuario.
 
@@ -59,7 +74,11 @@ Usa siempre /frontend-design para diseñar la interfaz de usuario.
   port, it also carries classes for screens that do not exist yet (`.about-*`, `.gp-*`);
   those are not dead code to prune, they are the next specs' styles. When markup needs a
   reference class, reuse it instead of re-styling with utilities, and change the theme by
-  editing the tokens in `:root`.
+  editing the tokens in `:root`. The one exception to the port sits at the very end of the
+  file under a `NOT PART OF THE PORT` banner: `.terminal-error` (SPEC 03), the failure
+  variant of `.terminal-success`, which the reference has no equivalent for because its
+  contact form could not fail. Anything else added outside the port belongs in that block,
+  not scattered through the file.
 - The design is dark-only — there is no `prefers-color-scheme` branch and no `dark:`
   variant. Colors come from the `--bg` / `--ink` / accent tokens.
 - `app/layout.tsx` renders the fixed `.av-bg` and `.av-noise` atmosphere layers and wraps

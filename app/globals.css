@@ -1776,3 +1776,20 @@ a { color: inherit; text-decoration: none; }
   clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
 }
 @keyframes spinpix { to { transform: rotate(360deg); } }
+
+/* ==========================================================================
+   NOT PART OF THE PORT
+
+   Everything above this line is a literal port of
+   references/templates/home-about/styles.css. The block below is the only rule
+   this project adds on its own (SPEC 03).
+
+   The reference form never fails — its onSubmit just flipped a flag — so it has
+   a success terminal and no error one. Sending real mail needs both. This is the
+   same terminal in the danger accent: it goes alongside .terminal-success, not
+   instead of it, so the bar, the dots and the body keep their styles.
+   ========================================================================== */
+.terminal-error { border-color: var(--magenta); box-shadow: 0 0 22px rgba(255,0,110,0.25); }
+.terminal-error .term-body .line { color: var(--magenta); }
+.terminal-error .term-body .dim { color: var(--ink-dim); }
+.terminal-error .term-body .success { color: var(--magenta); text-shadow: 0 0 6px rgba(255,0,110,0.45); }
