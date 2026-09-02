@@ -31,6 +31,9 @@ including how to run a single test.
 Type checking has no dedicated script — `next build` type-checks, or run
 `npx tsc --noEmit` for a faster check.
 
+## Skills
+Usa siempre /frontend-design para diseñar la interfaz de usuario.
+
 ## Stack and conventions
 
 - **Next.js 16 App Router** with React 19. Everything lives under `app/`; there is no
@@ -46,8 +49,19 @@ Type checking has no dedicated script — `next build` type-checks, or run
 - **Tailwind CSS v4**, configured entirely in CSS. There is no `tailwind.config.*`:
   `app/globals.css` does `@import "tailwindcss"` and declares design tokens in an
   `@theme inline` block. Add theme values there, not in a JS config.
-- Dark mode is driven by `prefers-color-scheme` (CSS variables in `globals.css` plus
-  `dark:` utilities), not a class toggle.
-- Fonts come from `next/font/google` (Geist / Geist Mono) and are exposed as the
-  `--font-geist-sans` / `--font-geist-mono` CSS variables wired into `@theme inline`.
+- **The global theme is a straight port of `references/templates/styles.css`** (neon
+  arcade: dark base, cyan/magenta/yellow accents, CRT scanlines). `app/globals.css` holds
+  the `:root` token block plus every component class the reference templates in
+  `references/templates/*.jsx` use (`.av-nav`, `.btn`, `.card`, `.crt`, `.leaderboard`,
+  `.podium`, …). When markup needs a reference class, reuse it instead of re-styling with
+  utilities, and change the theme by editing the tokens in `:root`.
+- The design is dark-only — there is no `prefers-color-scheme` branch and no `dark:`
+  variant. Colors come from the `--bg` / `--ink` / accent tokens.
+- `app/layout.tsx` renders the fixed `.av-bg` and `.av-noise` atmosphere layers and wraps
+  `children` in `#root`, matching the reference HTML. Pages render their content inside a
+  `<main className="av-main">`.
+- Fonts come from `next/font/google`: Press Start 2P (`--font-press-start`, the `--pixel`
+  display face), JetBrains Mono (`--font-jetbrains-mono`) and Courier Prime
+  (`--font-courier-prime`), which together back the `--mono` body stack. Use the `--pixel`
+  / `--mono` variables (or the `font-pixel` / `font-mono` utilities), not the raw families.
 - TypeScript is `strict`, and `@/*` maps to the repo root (e.g. `@/app/...`).
