@@ -8,10 +8,14 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useSession } from "@/app/lib/session";
 
-export function AuthForm() {
+export type AuthTab = "in" | "up";
+
+export function AuthForm({ initialTab = "in" }: { initialTab?: AuthTab }) {
   const router = useRouter();
   const { signIn } = useSession();
-  const [tab, setTab] = useState<"in" | "up">("in");
+  // Which tab opens comes from the ?tab search param, resolved on the server by
+  // app/login/page.tsx. It only seeds the state: switching tabs stays local.
+  const [tab, setTab] = useState<AuthTab>(initialTab);
   const [user, setUser] = useState("");
   const [pass, setPass] = useState("");
   const [email, setEmail] = useState("");
@@ -19,7 +23,7 @@ export function AuthForm() {
   const submit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     signIn({ name: (user || "PLAYER1").toUpperCase().slice(0, 10) });
-    router.push("/");
+    router.push("/games");
   };
 
   return (
@@ -69,7 +73,7 @@ export function AuthForm() {
         style={{ width: "100%", marginTop: 10 }}
         onClick={() => {
           signIn(null);
-          router.push("/");
+          router.push("/games");
         }}
       >
         JUGAR COMO INVITADO

@@ -49,12 +49,17 @@ Usa siempre /frontend-design para diseñar la interfaz de usuario.
 - **Tailwind CSS v4**, configured entirely in CSS. There is no `tailwind.config.*`:
   `app/globals.css` does `@import "tailwindcss"` and declares design tokens in an
   `@theme inline` block. Add theme values there, not in a JS config.
-- **The global theme is a straight port of `references/templates/styles.css`** (neon
-  arcade: dark base, cyan/magenta/yellow accents, CRT scanlines). `app/globals.css` holds
-  the `:root` token block plus every component class the reference templates in
-  `references/templates/*.jsx` use (`.av-nav`, `.btn`, `.card`, `.crt`, `.leaderboard`,
-  `.podium`, …). When markup needs a reference class, reuse it instead of re-styling with
-  utilities, and change the theme by editing the tokens in `:root`.
+- **The global theme is a straight port of `references/templates/home-about/styles.css`**
+  (neon arcade: dark base, cyan/magenta/yellow accents, CRT scanlines). That file is a
+  superset of the older `references/templates/styles.css`, which is no longer the theme
+  source. `app/globals.css` holds the `:root` token block plus every component class the
+  reference templates in `references/templates/*.jsx` and
+  `references/templates/home-about/*.jsx` use (`.av-nav`, `.btn`, `.card`, `.crt`,
+  `.leaderboard`, `.podium`, `.home-hero`, `.feature-card`, `.ticker`, …). Being a full
+  port, it also carries classes for screens that do not exist yet (`.about-*`, `.gp-*`);
+  those are not dead code to prune, they are the next specs' styles. When markup needs a
+  reference class, reuse it instead of re-styling with utilities, and change the theme by
+  editing the tokens in `:root`.
 - The design is dark-only — there is no `prefers-color-scheme` branch and no `dark:`
   variant. Colors come from the `--bg` / `--ink` / accent tokens.
 - `app/layout.tsx` renders the fixed `.av-bg` and `.av-noise` atmosphere layers and wraps
