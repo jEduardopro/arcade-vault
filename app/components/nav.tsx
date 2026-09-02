@@ -13,9 +13,11 @@ export function Nav() {
   const pathname = usePathname();
   const { user, signOut } = useSession();
 
-  // "Biblioteca" stays lit on the library and on every game route, the way the
-  // reference kept it lit for the detail and player screens.
-  const isLibrary = pathname === "/" || pathname.startsWith("/games");
+  // "Inicio" only lights on the landing itself, so it has to match exactly.
+  // "Biblioteca" covers the whole /games segment, the way the reference kept it
+  // lit for the detail and player screens.
+  const isHome = pathname === "/";
+  const isLibrary = pathname.startsWith("/games");
   const isHall = pathname === "/hall-of-fame";
   const isAuth = pathname === "/login";
 
@@ -31,7 +33,10 @@ export function Nav() {
           </div>
         </Link>
         <div className="links">
-          <Link href="/" className={isLibrary ? "active" : ""} onClick={close}>
+          <Link href="/" className={isHome ? "active" : ""} onClick={close}>
+            Inicio
+          </Link>
+          <Link href="/games" className={isLibrary ? "active" : ""} onClick={close}>
             Biblioteca
           </Link>
           <Link href="/hall-of-fame" className={isHall ? "active" : ""} onClick={close}>
@@ -65,7 +70,10 @@ export function Nav() {
         <div className="pixel neon-cyan" style={{ fontSize: 11, marginBottom: 16 }}>
           MENÚ
         </div>
-        <Link href="/" className={isLibrary ? "active" : ""} onClick={close}>
+        <Link href="/" className={isHome ? "active" : ""} onClick={close}>
+          Inicio
+        </Link>
+        <Link href="/games" className={isLibrary ? "active" : ""} onClick={close}>
           Biblioteca
         </Link>
         <Link href="/hall-of-fame" className={isHall ? "active" : ""} onClick={close}>

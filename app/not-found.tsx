@@ -37,7 +37,7 @@ export default function NotFound() {
               flexWrap: "wrap",
             }}
           >
-            <Link className="btn lg" href="/">
+            <Link className="btn lg" href="/games">
               VOLVER AL VAULT
             </Link>
             <Link className="btn ghost lg" href="/hall-of-fame">

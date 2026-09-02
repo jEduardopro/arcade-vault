@@ -8,7 +8,17 @@ export const metadata: Metadata = {
 
 // Access screen of references/templates/auth.jsx. The card header is static
 // text, so only the form below it is a client island.
-export default function LoginPage() {
+//
+// The landing's "CREAR CUENTA" and "EMPEZAR GRATIS" buttons link here with
+// ?tab=signup, so the tab they promise is the one that opens. Reading
+// searchParams here rather than with useSearchParams in the form keeps the
+// decision on the server: no extra client state and no Suspense boundary. The
+// cost is that this route renders on demand instead of being prerendered, which
+// an access screen does not miss.
+export default async function LoginPage({ searchParams }: PageProps<"/login">) {
+  const { tab } = await searchParams;
+  const initialTab = tab === "signup" ? "up" : "in";
+
   return (
     <main className="av-main">
       <div className="av-auth-wrap fade-in">
@@ -29,7 +39,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <AuthForm />
+          <AuthForm initialTab={initialTab} />
         </div>
       </div>
     </main>

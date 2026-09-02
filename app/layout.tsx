@@ -8,8 +8,8 @@ import "./globals.css";
 // next/font self-hosts these three families under their real names
 // ("Press Start 2P", "JetBrains Mono", "Courier Prime"), so globals.css names
 // them directly in --pixel / --mono and stays a byte-for-byte port of
-// references/templates/styles.css. Importing them here is what emits the
-// @font-face rules; the exposed variables are kept for use from Tailwind.
+// references/templates/home-about/styles.css. Importing them here is what emits
+// the @font-face rules; the exposed variables are kept for use from Tailwind.
 
 // Display face for every pixel/arcade label (--pixel).
 const pressStart = Press_Start_2P({
