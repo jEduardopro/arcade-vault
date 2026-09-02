@@ -16,9 +16,14 @@ import { useEffect, useRef, useState } from "react";
 export function Reveal({
   children,
   className,
+  ariaHidden,
 }: {
   children: React.ReactNode;
   className?: string;
+  // For decorative sections that still animate in — the pixel divider on
+  // /about is the only one. It reveals like any other section but has nothing
+  // to announce, so it stays out of the accessibility tree.
+  ariaHidden?: boolean;
 }) {
   const ref = useRef<HTMLElement>(null);
   // Server render and first client render agree on false, so hydration matches
@@ -62,6 +67,7 @@ export function Reveal({
     <section
       ref={ref}
       className={[className, "reveal", shown ? "in" : ""].filter(Boolean).join(" ")}
+      aria-hidden={ariaHidden || undefined}
     >
       {children}
     </section>
