@@ -1,4 +1,13 @@
-@import "tailwindcss";
+/* Tailwind WITHOUT preflight. references/templates/styles.css is the only reset
+   this design has, and it relies on browser defaults that Tailwind's preflight
+   overrides (bold headings, the 1px 2px padding on form controls). Loading only
+   the theme and utilities layers keeps the port below rendering identically to
+   the reference. Note: utilities that assume preflight (e.g. `border`, which
+   needs border-style: solid) are not available; style with the reference
+   classes, as CLAUDE.md requires. */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
 
 /* Reference tokens exposed to Tailwind so utilities (bg-bg-2, text-cyan,
    font-pixel, …) resolve to the same variables the handwritten CSS below uses. */
@@ -40,8 +49,8 @@
   --bronze: #d97a3a;
   --line: rgba(0, 245, 255, 0.18);
   --line-2: rgba(255, 255, 255, 0.06);
-  --pixel: var(--font-press-start), "Press Start 2P", system-ui, monospace;
-  --mono: var(--font-jetbrains-mono), var(--font-courier-prime), "JetBrains Mono", "Courier Prime", "Courier New", monospace;
+  --pixel: "Press Start 2P", system-ui, monospace;
+  --mono: "JetBrains Mono", "Courier Prime", "Courier New", monospace;
 }
 
 * { box-sizing: border-box; }
