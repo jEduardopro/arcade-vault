@@ -82,11 +82,14 @@ export const GAMES: Game[] = [
         plays: "18.0K",
     },
     {
-        id: "rocas",
-        title: "ROCAS",
-        short: "Pulveriza asteroides en gravedad cero.",
-        long: "Tu nave triangular flota en vacío absoluto. Dispara y rota para dividir rocas en fragmentos cada vez más pequeños. Cuidado con los OVNIs en el horizonte.",
+        id: "asteroides",
+        title: "ASTEROIDES",
+        short: "Pulveriza rocas a la deriva en gravedad cero.",
+        long: "Tu nave triangular flota en un vacío toroidal: sal por un borde y aparecerás por el opuesto. Dispara para partir las rocas grandes en medianas y las medianas en pequeñas, y recoge el módulo 3x para triplicar tu fuego durante cinco segundos.",
         cat: "SHOOTER",
+        // The cover generator keeps its original name: the CSS class lives in
+        // globals.css as part of the literal port, and the card it belonged to
+        // is the one this entry replaces.
         cover: "cover-rocas",
         color: "yellow",
         best: 41200,
