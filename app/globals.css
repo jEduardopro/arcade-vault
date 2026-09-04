@@ -1781,15 +1781,27 @@ a { color: inherit; text-decoration: none; }
    NOT PART OF THE PORT
 
    Everything above this line is a literal port of
-   references/templates/home-about/styles.css. The block below is the only rule
-   this project adds on its own (SPEC 03).
+   references/templates/home-about/styles.css. Every rule this project adds on
+   its own lives below, one labelled block per spec, so the port above stays
+   verifiable against the reference.
+   ========================================================================== */
 
+/* --- SPEC 03 — the contact terminal in its failure state ------------------
    The reference form never fails — its onSubmit just flipped a flag — so it has
    a success terminal and no error one. Sending real mail needs both. This is the
    same terminal in the danger accent: it goes alongside .terminal-success, not
-   instead of it, so the bar, the dots and the body keep their styles.
-   ========================================================================== */
+   instead of it, so the bar, the dots and the body keep their styles. */
 .terminal-error { border-color: var(--magenta); box-shadow: 0 0 22px rgba(255,0,110,0.25); }
 .terminal-error .term-body .line { color: var(--magenta); }
 .terminal-error .term-body .dim { color: var(--ink-dim); }
 .terminal-error .term-body .success { color: var(--magenta); text-shadow: 0 0 6px rgba(255,0,110,0.45); }
+
+/* --- SPEC 05 — the real game canvas ---------------------------------------
+   Fills .crt-screen, which already carries the 4/3 aspect ratio of the 800x600
+   game world and the overflow that clips it. The canvas keeps its own 800x600
+   coordinate space (scaled by devicePixelRatio in the engine); this only
+   stretches the result over the screen, so the game never causes horizontal
+   scroll on a narrow viewport.
+   .game-arena, the fake CSS animation the other cartridges still use, stays
+   where it is: this class goes next to it, not in its place. */
+.game-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }

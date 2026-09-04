@@ -31,7 +31,7 @@ finge: validación en servidor, límite de envíos, estado de envío en curso y 
 **Dentro:**
 
 - Ruta `/about` con las dos secciones de `about.jsx` en su orden: el héroe «ACERCA DE ARCADE VAULT» con
-  sus tres *highlights*, el divisor pixelado y la sección de contacto.
+  sus tres _highlights_, el divisor pixelado y la sección de contacto.
 - Los tres iconos pixelados del héroe (`HEART`, `BROWSER`, `PLANT`), copiados `rect` a `rect`.
 - El formulario de contacto con sus tres campos (nombre, correo, mensaje), su `shake` de validación y su
   terminal de éxito `VAULT-OS // TERMINAL`.
@@ -78,19 +78,19 @@ import type { AccentColor } from "@/app/lib/home";
 export type HighlightIconKind = "HEART" | "BROWSER" | "PLANT";
 
 export type AboutHighlight = {
-  icon: HighlightIconKind;
-  text: string;          // "HECHO CON ❤️ PARA JUGADORES"
-  color: AccentColor;    // "magenta" | "cyan" | "green"
+    icon: HighlightIconKind;
+    text: string; // "HECHO CON ❤️ PARA JUGADORES"
+    color: AccentColor; // "magenta" | "cyan" | "green"
 };
 
 export type ContactTip = {
-  text: string;          // "RESPUESTA EN 24-48H"
-  led: "green" | "yellow" | "magenta";  // clase "", "y", "m" del .tip-led
+    text: string; // "RESPUESTA EN 24-48H"
+    led: "green" | "yellow" | "magenta"; // clase "", "y", "m" del .tip-led
 };
 
-export const ABOUT_HIGHLIGHTS: readonly AboutHighlight[];  // los 3 de about.jsx
-export const CONTACT_TIPS: readonly ContactTip[];          // los 3 .tip
-export const DIVIDER_PIXELS = 24;                          // los <span> del .div-pixels
+export const ABOUT_HIGHLIGHTS: readonly AboutHighlight[]; // los 3 de about.jsx
+export const CONTACT_TIPS: readonly ContactTip[]; // los 3 .tip
+export const DIVIDER_PIXELS = 24; // los <span> del .div-pixels
 ```
 
 `AccentColor` se reutiliza de `app/lib/home.ts`: es exactamente el mismo conjunto de acentos.
@@ -101,9 +101,9 @@ export const DIVIDER_PIXELS = 24;                          // los <span> del .di
 // app/lib/contact.ts
 
 export const CONTACT_LIMITS = {
-  name: 80,
-  email: 160,
-  message: 4000,
+    name: 80,
+    email: 160,
+    message: 4000,
 } as const;
 
 export type ContactInput = { name: string; email: string; message: string };
@@ -114,18 +114,18 @@ export type ContactInput = { name: string; email: string; message: string };
 //   sent    → correo entregado (o registrado en consola); terminal verde
 //   failed  → fallo de transporte, configuración o límite; terminal roja
 export type ContactState =
-  | { status: "idle" }
-  | { status: "invalid"; message: string }
-  | { status: "sent"; name: string }
-  | { status: "failed"; message: string };
+    | { status: "idle" }
+    | { status: "invalid"; message: string }
+    | { status: "sent"; name: string }
+    | { status: "failed"; message: string };
 
 export const CONTACT_IDLE: ContactState = { status: "idle" };
 
 // Validación pura, sin dependencias del servidor, para poder llamarla desde la
 // Server Action y desde cualquier prueba futura.
 export function validateContact(input: ContactInput):
-  | { ok: true; value: ContactInput }        // con los tres campos ya recortados
-  | { ok: false; message: string };
+    | { ok: true; value: ContactInput } // con los tres campos ya recortados
+    | { ok: false; message: string };
 ```
 
 Reglas de `validateContact`, en este orden:
@@ -142,8 +142,8 @@ Reglas de `validateContact`, en este orden:
 // app/lib/rate-limit.ts
 
 export const CONTACT_RATE = {
-  max: 3,                    // envíos permitidos
-  windowMs: 10 * 60 * 1000,  // por ventana de 10 minutos
+    max: 3, // envíos permitidos
+    windowMs: 10 * 60 * 1000, // por ventana de 10 minutos
 } as const;
 
 // Devuelve false cuando la IP ya agotó su cuota en la ventana actual.
@@ -157,11 +157,11 @@ límite. Es deliberadamente efímero: se pierde en cada reinicio y no se compart
 
 ### 3.4 — Variables de entorno
 
-| Variable | Obligatoria | Para qué |
-| --- | --- | --- |
-| `RESEND_API_KEY` | En producción | Clave de la API de Resend. Sin ella, fuera de producción se activa el modo consola. |
-| `CONTACT_TO_EMAIL` | Sí | Buzón del equipo que recibe los mensajes. |
-| `CONTACT_FROM_EMAIL` | Sí | Remitente verificado en Resend (p. ej. `Arcade Vault <hola@midominio.com>`). |
+| Variable             | Obligatoria   | Para qué                                                                            |
+| -------------------- | ------------- | ----------------------------------------------------------------------------------- |
+| `RESEND_API_KEY`     | En producción | Clave de la API de Resend. Sin ella, fuera de producción se activa el modo consola. |
+| `CONTACT_TO_EMAIL`   | Sí            | Buzón del equipo que recibe los mensajes.                                           |
+| `CONTACT_FROM_EMAIL` | Sí            | Remitente verificado en Resend (p. ej. `Arcade Vault <hola@midominio.com>`).        |
 
 Ninguna lleva el prefijo `NEXT_PUBLIC_`: las tres se leen solo dentro de la Server Action, así que
 nunca viajan al navegador.
@@ -188,37 +188,47 @@ Cada paso deja la aplicación compilando y navegable.
 4. **`app/actions/contact.ts` — la Server Action.** Archivo con `"use server"` que exporta
    `sendContactMessage(prev: ContactState, formData: FormData): Promise<ContactState>`, con esta
    secuencia:
-   1. Lee `name`, `email` y `message` del `FormData` y los pasa por `validateContact`. Si falla →
-      `{ status: "invalid", message }`.
-   2. Obtiene la IP con `await headers()` (en Next 16 `headers()` es asíncrono), tomando la primera
-      entrada de `x-forwarded-for` y cayendo en `"unknown"` si no viene. Si `takeContactSlot` devuelve
-      `false` → `{ status: "failed", message: "Demasiados envíos desde esta conexión. Inténtalo en unos minutos." }`.
-   3. Si no hay `RESEND_API_KEY`:
-      - fuera de producción → `console.info` con el mensaje completo y `{ status: "sent", name }`;
-      - en producción → `{ status: "failed", message: "El servicio de correo no está configurado." }`.
-   4. Llama a `resend.emails.send` con `from: CONTACT_FROM_EMAIL`, `to: CONTACT_TO_EMAIL`,
-      `replyTo` con el correo del formulario, `subject: "Arcade Vault · Nuevo mensaje de contacto"` y un
-      `text` plano con nombre, correo y mensaje. Toda la llamada va dentro de un `try/catch`.
-   5. Si Resend devuelve error o el `catch` se dispara → `console.error` en el servidor y
-      `{ status: "failed", message: "No pudimos enviar el mensaje. Inténtalo de nuevo." }`. Si va bien →
-      `{ status: "sent", name }`.
+    1. Lee `name`, `email` y `message` del `FormData` y los pasa por `validateContact`. Si falla →
+       `{ status: "invalid", message }`.
+    2. Obtiene la IP con `await headers()` (en Next 16 `headers()` es asíncrono), tomando la primera
+       entrada de `x-forwarded-for` y cayendo en `"unknown"` si no viene. Si `takeContactSlot` devuelve
+       `false` → `{ status: "failed", message: "Demasiados envíos desde esta conexión. Inténtalo en unos minutos." }`.
+    3. Si no hay `RESEND_API_KEY`:
+        - fuera de producción → `console.info` con el mensaje completo y `{ status: "sent", name }`;
+        - en producción → `{ status: "failed", message: "El servicio de correo no está configurado." }`.
+    4. Llama a `resend.emails.send` con `from: CONTACT_FROM_EMAIL`, `to: CONTACT_TO_EMAIL`,
+       `replyTo` con el correo del formulario, `subject: "Arcade Vault · Nuevo mensaje de contacto"` y un
+       `text` plano con nombre, correo y mensaje. Toda la llamada va dentro de un `try/catch`.
+    5. Si Resend devuelve error o el `catch` se dispara → `console.error` en el servidor y
+       `{ status: "failed", message: "No pudimos enviar el mensaje. Inténtalo de nuevo." }`. Si va bien →
+       `{ status: "sent", name }`.
 
-   Ningún mensaje devuelto al cliente incluye el detalle del error de Resend; ese detalle solo va al log.
-   Verificar: sin `RESEND_API_KEY` en `.env.local`, enviar el formulario en `npm run dev` imprime el
-   mensaje en la terminal del servidor y pinta la terminal de éxito.
+    Ningún mensaje devuelto al cliente incluye el detalle del error de Resend; ese detalle solo va al log.
+    Verificar: sin `RESEND_API_KEY` en `.env.local`, enviar el formulario en `npm run dev` imprime el
+    mensaje en la terminal del servidor y pinta la terminal de éxito.
 
 5. **`app/globals.css` — la variante de error.** Añadir, al final del archivo y bajo un comentario que
    deje claro que es la única regla que no viene del port de `references/templates/home-about/styles.css`:
 
-   ```css
-   .terminal-error { border-color: var(--magenta); box-shadow: 0 0 22px rgba(255,0,110,0.25); }
-   .terminal-error .term-body .line { color: var(--magenta); }
-   .terminal-error .term-body .dim { color: var(--ink-dim); }
-   .terminal-error .term-body .success { color: var(--magenta); text-shadow: 0 0 6px rgba(255,0,110,0.45); }
-   ```
+    ```css
+    .terminal-error {
+        border-color: var(--magenta);
+        box-shadow: 0 0 22px rgba(255, 0, 110, 0.25);
+    }
+    .terminal-error .term-body .line {
+        color: var(--magenta);
+    }
+    .terminal-error .term-body .dim {
+        color: var(--ink-dim);
+    }
+    .terminal-error .term-body .success {
+        color: var(--magenta);
+        text-shadow: 0 0 6px rgba(255, 0, 110, 0.45);
+    }
+    ```
 
-   Se aplica junto a `.terminal-success`, no en su lugar: la estructura (barra, puntos, cuerpo) es la
-   misma y solo cambia el color. Verificar: el resto de pantallas no cambia de aspecto.
+    Se aplica junto a `.terminal-success`, no en su lugar: la estructura (barra, puntos, cuerpo) es la
+    misma y solo cambia el color. Verificar: el resto de pantallas no cambia de aspecto.
 
 6. **`app/lib/about.ts`.** Los tipos y las tres constantes de la sección 3.1, con los literales copiados
    palabra por palabra de `about.jsx`, incluido el emoji de «HECHO CON ❤️ PARA JUGADORES».
@@ -238,25 +248,25 @@ Cada paso deja la aplicación compilando y navegable.
 9. **`app/components/contact-form.tsx` — la isla cliente.** Componente `"use client"` que envuelve el
    `<form className="contact-form">` y consume la Server Action con
    `useActionState(sendContactMessage, CONTACT_IDLE)`. Comportamiento por estado:
-   - **`idle` e `invalid`:** se pintan los tres `.field` del template (etiquetas `NOMBRE`,
-     `CORREO ELECTRÓNICO`, `MENSAJE`, con sus `placeholder` originales) y el botón
-     `▶  ENVIAR MENSAJE`. Los campos son controlados, para que el texto sobreviva a un error.
-   - **Validación en cliente:** antes de enviar se repite la comprobación de campos vacíos del template;
-     si falla, se cancela el envío y se aplica la clase `shake` durante 400 ms. El mismo temblor se
-     dispara cuando el estado que vuelve del servidor es `invalid`, y el mensaje de la validación se
-     muestra sobre el botón.
-   - **Envío en curso** (`isPending` de `useActionState`): los tres campos y el botón quedan
-     deshabilitados y el botón dice `ENVIANDO…`. Esto es lo que impide el doble envío por doble clic.
-   - **`sent`:** la terminal de éxito exacta del template — barra con los tres puntos,
-     `VAULT-OS // TERMINAL`, las tres líneas `[OK]`, la línea de éxito con el nombre en mayúsculas y el
-     `caret`, y el botón `ENVIAR OTRO MENSAJE` que vacía los campos y vuelve al estado inicial.
-   - **`failed`:** la misma terminal con la clase `terminal-error`, las líneas
-     `[ERROR] Conexión rechazada…` en rojo, el `message` que devolvió la acción y un botón `REINTENTAR`
-     que vuelve al formulario **con los tres campos tal como estaban**.
+    - **`idle` e `invalid`:** se pintan los tres `.field` del template (etiquetas `NOMBRE`,
+      `CORREO ELECTRÓNICO`, `MENSAJE`, con sus `placeholder` originales) y el botón
+      `▶  ENVIAR MENSAJE`. Los campos son controlados, para que el texto sobreviva a un error.
+    - **Validación en cliente:** antes de enviar se repite la comprobación de campos vacíos del template;
+      si falla, se cancela el envío y se aplica la clase `shake` durante 400 ms. El mismo temblor se
+      dispara cuando el estado que vuelve del servidor es `invalid`, y el mensaje de la validación se
+      muestra sobre el botón.
+    - **Envío en curso** (`isPending` de `useActionState`): los tres campos y el botón quedan
+      deshabilitados y el botón dice `ENVIANDO…`. Esto es lo que impide el doble envío por doble clic.
+    - **`sent`:** la terminal de éxito exacta del template — barra con los tres puntos,
+      `VAULT-OS // TERMINAL`, las tres líneas `[OK]`, la línea de éxito con el nombre en mayúsculas y el
+      `caret`, y el botón `ENVIAR OTRO MENSAJE` que vacía los campos y vuelve al estado inicial.
+    - **`failed`:** la misma terminal con la clase `terminal-error`, las líneas
+      `[ERROR] Conexión rechazada…` en rojo, el `message` que devolvió la acción y un botón `REINTENTAR`
+      que vuelve al formulario **con los tres campos tal como estaban**.
 
-   El `shake` se limpia con un `setTimeout` que se cancela al desmontar, igual que hace la referencia.
-   Verificar: enviar con un campo vacío hace temblar el formulario sin llamar al servidor; enviar
-   correcto muestra la terminal verde; el botón queda bloqueado mientras se envía.
+    El `shake` se limpia con un `setTimeout` que se cancela al desmontar, igual que hace la referencia.
+    Verificar: enviar con un campo vacío hace temblar el formulario sin llamar al servidor; enviar
+    correcto muestra la terminal verde; el botón queda bloqueado mientras se envía.
 
 10. **`app/about/page.tsx`.** Server Component que replica la estructura de `about.jsx`:
     `<main className="av-main">` con `<div className="about fade-in">` dentro, y ahí:
@@ -289,8 +299,8 @@ Cada paso deja la aplicación compilando y navegable.
 
 - [ ] `npm run build` y `npm run lint` terminan sin errores.
 - [ ] `/about` existe y muestra el héroe `ACERCA DE ARCADE VAULT` con el párrafo de misión y tres
-      *highlights* con sus iconos pixelados en magenta, cian y verde.
-- [ ] Al pasar el ratón por un *highlight*, se eleva y su borde toma su color de acento.
+      _highlights_ con sus iconos pixelados en magenta, cian y verde.
+- [ ] Al pasar el ratón por un _highlight_, se eleva y su borde toma su color de acento.
 - [ ] El divisor pixelado muestra 24 cuadros que parpadean escalonados.
 - [ ] La sección de contacto muestra el título `CONTÁCTANOS`, los tres `.tip` con sus LED verde,
       amarillo y magenta, y el formulario con los tres campos y sus `placeholder` del template.
@@ -322,7 +332,7 @@ Cada paso deja la aplicación compilando y navegable.
       visibles.
 - [ ] Con `prefers-reduced-motion: reduce`, el divisor y la sección de contacto están visibles desde la
       carga, sin animación de entrada.
-- [ ] A 800 px de ancho, `/about` no genera scroll horizontal: los *highlights* se apilan en una columna
+- [ ] A 800 px de ancho, `/about` no genera scroll horizontal: los _highlights_ se apilan en una columna
       y el `.contact-grid` pasa a una sola columna.
 - [ ] Las seis rutas anteriores a este spec se ven exactamente igual que antes.
 - [ ] La consola del navegador no registra errores de hidratación en `/about`.
@@ -399,18 +409,18 @@ Cada paso deja la aplicación compilando y navegable.
 
 ## 7 — Riesgos identificados
 
-| Riesgo | Mitigación |
-| --- | --- |
-| La clave de API o el detalle del error de Resend acaban en el navegador | Las tres variables se leen solo dentro de la Server Action y ninguna lleva `NEXT_PUBLIC_`. Los mensajes de `failed` son literales fijos; el detalle va a `console.error` en el servidor. Hay un criterio de aceptación que lo verifica. |
-| `.env.local` se sube al repositorio por error | `.gitignore` ya ignora `.env*`; se añade la excepción `!.env.example` para que el ejemplo sí se versione, y un criterio de aceptación comprueba que `.env.example` no lleva valores reales. |
-| El límite por IP vive en memoria: se pierde al reiniciar y no se comparte entre instancias | Aceptado y documentado. Frena el abuso trivial, que es el objetivo; un almacén compartido queda para el spec que lo necesite. |
-| Detrás de un proxy, `x-forwarded-for` puede faltar o venir falsificado, y todo el tráfico caería en la misma cubeta `"unknown"` | Aceptado: en el peor caso el límite es más estricto de lo previsto, nunca más laxo. El fallo degradado es que alguien vea el mensaje de «demasiados envíos» antes de tiempo, no que el formulario quede abierto. |
-| `CONTACT_FROM_EMAIL` sin dominio verificado en Resend hace que todos los envíos fallen en producción | El fallo se ve tal cual en la terminal de error y queda registrado en el log del servidor. La verificación del dominio es un paso de configuración de Resend, fuera del código. |
-| `.reveal` arranca en `opacity: 0`: sin JavaScript, el divisor y todo el contacto quedan invisibles | Bloque `<noscript>` idéntico al de la landing, y `<Reveal>` ya se revela de inmediato con `prefers-reduced-motion` o sin `IntersectionObserver`. |
-| El bloque `.terminal-error` rompe la invariante de que `globals.css` es un port literal de la referencia | Va al final del archivo, aislado y bajo un comentario que lo identifica como la única regla ajena al port. `CLAUDE.md` se actualiza para decirlo. |
-| El usuario pierde un mensaje largo si el envío falla | El formulario es controlado y `REINTENTAR` no vacía los campos. Es un criterio de aceptación explícito. |
-| Un doble clic dispara dos correos | El botón y los campos quedan deshabilitados mientras `isPending`, y el límite por IP acota el daño si aun así se colara. |
-| Enlazar `Acerca de` desde el Nav antes de que exista la ruta dejaría un 404 visible | El paso 11 (el enlace) va después del paso 10 (la ruta). |
+| Riesgo                                                                                                                          | Mitigación                                                                                                                                                                                                                              |
+| ------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| La clave de API o el detalle del error de Resend acaban en el navegador                                                         | Las tres variables se leen solo dentro de la Server Action y ninguna lleva `NEXT_PUBLIC_`. Los mensajes de `failed` son literales fijos; el detalle va a `console.error` en el servidor. Hay un criterio de aceptación que lo verifica. |
+| `.env.local` se sube al repositorio por error                                                                                   | `.gitignore` ya ignora `.env*`; se añade la excepción `!.env.example` para que el ejemplo sí se versione, y un criterio de aceptación comprueba que `.env.example` no lleva valores reales.                                             |
+| El límite por IP vive en memoria: se pierde al reiniciar y no se comparte entre instancias                                      | Aceptado y documentado. Frena el abuso trivial, que es el objetivo; un almacén compartido queda para el spec que lo necesite.                                                                                                           |
+| Detrás de un proxy, `x-forwarded-for` puede faltar o venir falsificado, y todo el tráfico caería en la misma cubeta `"unknown"` | Aceptado: en el peor caso el límite es más estricto de lo previsto, nunca más laxo. El fallo degradado es que alguien vea el mensaje de «demasiados envíos» antes de tiempo, no que el formulario quede abierto.                        |
+| `CONTACT_FROM_EMAIL` sin dominio verificado en Resend hace que todos los envíos fallen en producción                            | El fallo se ve tal cual en la terminal de error y queda registrado en el log del servidor. La verificación del dominio es un paso de configuración de Resend, fuera del código.                                                         |
+| `.reveal` arranca en `opacity: 0`: sin JavaScript, el divisor y todo el contacto quedan invisibles                              | Bloque `<noscript>` idéntico al de la landing, y `<Reveal>` ya se revela de inmediato con `prefers-reduced-motion` o sin `IntersectionObserver`.                                                                                        |
+| El bloque `.terminal-error` rompe la invariante de que `globals.css` es un port literal de la referencia                        | Va al final del archivo, aislado y bajo un comentario que lo identifica como la única regla ajena al port. `CLAUDE.md` se actualiza para decirlo.                                                                                       |
+| El usuario pierde un mensaje largo si el envío falla                                                                            | El formulario es controlado y `REINTENTAR` no vacía los campos. Es un criterio de aceptación explícito.                                                                                                                                 |
+| Un doble clic dispara dos correos                                                                                               | El botón y los campos quedan deshabilitados mientras `isPending`, y el límite por IP acota el daño si aun así se colara.                                                                                                                |
+| Enlazar `Acerca de` desde el Nav antes de que exista la ruta dejaría un 404 visible                                             | El paso 11 (el enlace) va después del paso 10 (la ruta).                                                                                                                                                                                |
 
 ---
 

@@ -5,9 +5,11 @@
 // `npx supabase gen types typescript`) every time the schema changes, and paste
 // the output below this header.
 //
-// The `public` schema currently holds zero tables, so every map below is empty.
-// That is expected: SPEC 04 only wires the clients up, and the first table
-// arrives with the spec that needs it.
+// The `public` schema holds the two tables SPEC 06 created, `games` and
+// `scores`, plus the two views it reads through, `leaderboard` and
+// `games_with_best`. View columns come out nullable because PostgREST cannot
+// know otherwise; that is why app/lib/games.ts keeps its own hand-written `Game`
+// type and converts in one place.
 //
 // Prettier reformats this file through the PostToolUse hook. That is harmless —
 // the formatting is deterministic, so a regeneration produces the same result.
@@ -28,10 +30,131 @@ export type Database = {
     };
     public: {
         Tables: {
-            [_ in never]: never;
+            games: {
+                Row: {
+                    cat: string;
+                    color: string;
+                    cover: string;
+                    created_at: string;
+                    id: string;
+                    long: string;
+                    max_score: number;
+                    plays: string;
+                    short: string;
+                    sort_order: number;
+                    title: string;
+                };
+                Insert: {
+                    cat: string;
+                    color: string;
+                    cover: string;
+                    created_at?: string;
+                    id: string;
+                    long: string;
+                    max_score?: number;
+                    plays: string;
+                    short: string;
+                    sort_order: number;
+                    title: string;
+                };
+                Update: {
+                    cat?: string;
+                    color?: string;
+                    cover?: string;
+                    created_at?: string;
+                    id?: string;
+                    long?: string;
+                    max_score?: number;
+                    plays?: string;
+                    short?: string;
+                    sort_order?: number;
+                    title?: string;
+                };
+                Relationships: [];
+            };
+            scores: {
+                Row: {
+                    created_at: string;
+                    game_id: string;
+                    id: string;
+                    player: string;
+                    score: number;
+                };
+                Insert: {
+                    created_at?: string;
+                    game_id: string;
+                    id?: string;
+                    player: string;
+                    score: number;
+                };
+                Update: {
+                    created_at?: string;
+                    game_id?: string;
+                    id?: string;
+                    player?: string;
+                    score?: number;
+                };
+                Relationships: [
+                    {
+                        foreignKeyName: "scores_game_id_fkey";
+                        columns: ["game_id"];
+                        isOneToOne: false;
+                        referencedRelation: "games";
+                        referencedColumns: ["id"];
+                    },
+                    {
+                        foreignKeyName: "scores_game_id_fkey";
+                        columns: ["game_id"];
+                        isOneToOne: false;
+                        referencedRelation: "games_with_best";
+                        referencedColumns: ["id"];
+                    },
+                ];
+            };
         };
         Views: {
-            [_ in never]: never;
+            games_with_best: {
+                Row: {
+                    best: number | null;
+                    cat: string | null;
+                    color: string | null;
+                    cover: string | null;
+                    created_at: string | null;
+                    id: string | null;
+                    long: string | null;
+                    max_score: number | null;
+                    plays: string | null;
+                    short: string | null;
+                    sort_order: number | null;
+                    title: string | null;
+                };
+                Relationships: [];
+            };
+            leaderboard: {
+                Row: {
+                    created_at: string | null;
+                    game_id: string | null;
+                    player: string | null;
+                    rank: number | null;
+                    score: number | null;
+                };
+                Relationships: [
+                    {
+                        foreignKeyName: "scores_game_id_fkey";
+                        columns: ["game_id"];
+                        isOneToOne: false;
+                        referencedRelation: "games";
+                        referencedColumns: ["id"];
+                    },
+                    {
+                        foreignKeyName: "scores_game_id_fkey";
+                        columns: ["game_id"];
+                        isOneToOne: false;
+                        referencedRelation: "games_with_best";
+                        referencedColumns: ["id"];
+                    },
+                ];
+            };
         };
         Functions: {
             [_ in never]: never;

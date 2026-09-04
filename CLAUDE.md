@@ -7,8 +7,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project
 
 Arcade Vault — a platform for playing games online and competing for the highest score.
-The repository is currently a fresh Next.js scaffold: `app/page.tsx` is still the
-create-next-app landing page, and no game, leaderboard, or backend code exists yet.
+Seven routes are built (`/`, `/games`, `/games/[id]`, `/games/[id]/play`, `/login`,
+`/hall-of-fame`, `/about`). The catalogue holds eight cartridges, of which **two really
+play**: ASTEROIDES (SPEC 05) and CAÍDA (SPEC 07). The other six still show the mock player
+from SPEC 01. The catalogue and every score live in Supabase (SPEC 06); the signed-in user
+is still fake and lives in `localStorage`.
 
 The README specifies a **spec-driven workflow**: features are designed with `/spec` and then
 built with `/spec-impl`, following the conventions of
@@ -68,6 +71,11 @@ are prefixed on purpose — the browser client needs them in the bundle. The sec
 
 Usa siempre /frontend-design para diseñar la interfaz de usuario.
 
+Para añadir un juego nuevo al Vault, diseña el spec con `/add-game` antes de escribir
+código; implementa después con `/spec-impl`. `/add-game` solo escribe el spec: lleva dentro
+el contrato del motor de SPEC 05 y las restricciones del catálogo de SPEC 06, así que un
+juego nuevo no tiene que redescubrirlos.
+
 ## Stack and conventions
 
 - **Next.js 16 App Router** with React 19. Everything lives under `app/`; there is no
@@ -93,11 +101,12 @@ Usa siempre /frontend-design para diseñar la interfaz de usuario.
   port, it also carries classes for screens that do not exist yet (`.about-*`, `.gp-*`);
   those are not dead code to prune, they are the next specs' styles. When markup needs a
   reference class, reuse it instead of re-styling with utilities, and change the theme by
-  editing the tokens in `:root`. The one exception to the port sits at the very end of the
-  file under a `NOT PART OF THE PORT` banner: `.terminal-error` (SPEC 03), the failure
-  variant of `.terminal-success`, which the reference has no equivalent for because its
-  contact form could not fail. Anything else added outside the port belongs in that block,
-  not scattered through the file.
+  editing the tokens in `:root`. The exceptions to the port sit at the very end of the file
+  under a `NOT PART OF THE PORT` banner, one labelled block per spec: `.terminal-error`
+  (SPEC 03), the failure variant of `.terminal-success` that the reference has no
+  equivalent for because its contact form could not fail, and `.game-canvas` (SPEC 05),
+  which stretches a real game's canvas over `.crt-screen`. Anything else added outside the
+  port belongs in that banner, not scattered through the file.
 - The design is dark-only — there is no `prefers-color-scheme` branch and no `dark:`
   variant. Colors come from the `--bg` / `--ink` / accent tokens.
 - `app/layout.tsx` renders the fixed `.av-bg` and `.av-noise` atmosphere layers and wraps
@@ -108,11 +117,75 @@ Usa siempre /frontend-design para diseñar la interfaz de usuario.
   (`--font-courier-prime`), which together back the `--mono` body stack. Use the `--pixel`
   / `--mono` variables (or the `font-pixel` / `font-mono` utilities), not the raw families.
 - TypeScript is `strict`, and `@/*` maps to the repo root (e.g. `@/app/...`).
-- **Supabase lives in `app/lib/supabase/` (SPEC 04).** `client.ts` exports `createClient()`
-  for Client Components; `server.ts` exports an **async** `createClient()` — `cookies()` is
-  async in Next 16 — for Server Components, Server Actions and Route Handlers. Both are
-  functions, never shared singletons: the server one is bound to its request's cookies.
+- **Supabase lives in `app/lib/supabase/` (SPEC 04, SPEC 06).** Three clients, all
+  functions and never shared singletons: `client.ts` for Client Components; `server.ts`, an
+  **async** `createClient()` — `cookies()` is async in Next 16 — bound to its request's
+  cookies, for Server Components, Server Actions and Route Handlers; and `public.ts`,
+  `createPublicClient()`, cookie-less, for public reads. Use the public one for anything
+  inside `unstable_cache`, which forbids the request APIs, and the server one to write.
   `types.ts` is generated, not hand-written — regenerate it with the Supabase MCP server's
   `generate_typescript_types` on every schema change. There is no session-refreshing
   `proxy.ts` yet; it arrives with the auth spec, and in Next 16 that file is `proxy.ts`,
   not the deprecated `middleware.ts`.
+- **The schema is SQL in `supabase/migrations/` (SPEC 06).** One file per change, named
+  `<timestamp>_<snake_case_description>.sql`, applied with the MCP server's
+  `apply_migration` under that same description. The server assigns the timestamp, so
+  rename the local file to the version `list_migrations` reports and the repository and the
+  remote registry stay identical. Seeds use `on conflict do nothing`, which means seeded
+  rows need literal ids — a `gen_random_uuid()` primary key can never conflict, so
+  re-applying would duplicate. `public.games` has no write policy at all: the catalogue is
+  edited here and nowhere else. `public.scores` accepts anonymous inserts and nothing else,
+  so a saved row is immutable from the API. Every view is declared
+  `with (security_invoker = true)`, or it bypasses the RLS of the tables it reads.
+- **Pure modules and query modules are split (SPEC 06).** `app/lib/games.ts` and
+  `app/lib/scores.ts` are dependency-free — types, `CATS`, `formatScore`, `formatDate`,
+  `validateScore` — so a client island can import them; the reads live in
+  `app/lib/catalogue.ts` (`getGames`, `getGame`) and `app/lib/leaderboard.ts`
+  (`getLeaderboard`, `getLeaderboards`). Keep that boundary: importing a query module from
+  a Client Component ships supabase-js to the browser, which is 234 KB of a chunk nobody
+  needs. It is the same rule `app/lib/contact.ts` follows since SPEC 03.
+- **The catalogue is cached, the scores are not (SPEC 06).** `catalogue.ts` wraps its reads
+  in `unstable_cache` under the `games` tag (`use cache` is unavailable: `next.config.ts`
+  does not enable `cacheComponents`). Boards are read fresh, and the two routes that show
+  them — `/hall-of-fame` and `/games/[id]` — declare `export const dynamic = "force-dynamic"`.
+  After an insert, `app/actions/scores.ts` calls `revalidateTag("games", { expire: 0 })`:
+  in Next 16 `revalidateTag` takes a second argument, and `updateTag` only reaches tags set
+  by `use cache`.
+- **A score is saved through `app/actions/scores.ts` (SPEC 06).** RLS lets anyone insert —
+  there is no identity until the auth spec — so the action is what protects the table:
+  `validateScore()` mirroring the `CHECK` constraints, the game's own `max_score` ceiling
+  read live, and `takeScoreSlot()` from `app/lib/rate-limit.ts`, five saves per IP every
+  five minutes. Same split as the contact form of SPEC 03: pure validation in `app/lib/`,
+  and only the action talks to the outside. Every message it returns is a fixed literal.
+- **Ported games live in `app/lib/engines/<game>/` (SPEC 05).** `references/started-games/`
+  holds three vanilla-canvas games; two are ported, `asteroides/` (SPEC 05) and `caida/`
+  (SPEC 07), each in `constants.ts` (every tuning number, copied from the original),
+  `entities.ts` (the classes, with `draw(ctx)` taking the context as a parameter) and
+  `engine.ts` (`create<Game>Engine`). Four rules make an engine reusable, and the next port
+  must keep them: **it never imports React** (`grep -rn 'from "react"' app/lib/engines` must
+  stay empty) and knows no DOM beyond its canvas and the window it listens to for keys; **it
+  draws no HUD and no overlays**, publishing `snapshot` and `status` through callbacks so
+  React paints them; **`snapshot` is emitted only when a value changes**, never once per
+  frame; and **it exposes `destroy()`**, which the mounting `useEffect` must call in its
+  cleanup, or StrictMode's double mount leaves two loops running.
+- **The engine's world does not have to be the playfield (SPEC 07).** Both engines reason in
+  a fixed 800×600 world, which is the `aspect-ratio: 4 / 3` of `.crt-screen`, so `.game-canvas`
+  covers it and no CSS is needed. Tetris's board is 300×600, so `caida/` draws that well
+  centred at `x: 250` and leaves the gutters empty except for the next-piece box on the
+  right — cheaper than a letterbox rule in `app/globals.css`, which is a literal port. A
+  game with no lives passes `lives: 0` and the shell renders `—`; one with no levels passes
+  `1`.
+- **A game is plugged in at `app/components/game-registry.ts`.** `GAME_ENGINES` maps a
+  `Game["id"]` to its component, lazily via `next/dynamic` with `ssr: false` (a canvas game
+  has nothing to render on the server). `game-player.tsx` is only the dispatcher: a
+  registered id mounts its real game, anything else falls back to `fake-game-player.tsx`,
+  the automatic-score mock from SPEC 01. The registry holds React components, so it lives
+  under `app/components/` and not beside the engines, which stay framework-free. Two ids are
+  registered today, `asteroides` and `caida`; adding Arkanoid is one `dynamic()` and one map
+  entry, and nothing on `/games/[id]/play` changes.
+- **The player screen's chrome is `app/components/player-shell.tsx`.** HUD bar, CRT frame,
+  pause overlay and end modal with the score-saving flow belong to the screen, not to any
+  game: a game passes numbers in and renders its canvas as `children`. The end modal saves
+  through the `submitScore` action (SPEC 06); its `SaveScoreForm` is remounted with a new
+  `key` on every run, because `useActionState` has no reset and a second run would open
+  already showing "PUNTUACIÓN GUARDADA".

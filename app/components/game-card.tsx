@@ -11,53 +11,57 @@ import type { Game } from "@/app/lib/games";
 import { formatScore } from "@/app/lib/scores";
 
 export function GameCard({ game }: { game: Game }) {
-  const tiltRef = useRef<HTMLAnchorElement>(null);
+    const tiltRef = useRef<HTMLAnchorElement>(null);
 
-  const onMove = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    const el = tiltRef.current;
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    const px = (e.clientX - r.left) / r.width - 0.5;
-    const py = (e.clientY - r.top) / r.height - 0.5;
-    el.style.transform = `translateY(-6px) rotateX(${-py * 6}deg) rotateY(${px * 8}deg)`;
-  };
+    const onMove = (e: React.MouseEvent<HTMLAnchorElement>) => {
+        const el = tiltRef.current;
+        if (!el) return;
+        const r = el.getBoundingClientRect();
+        const px = (e.clientX - r.left) / r.width - 0.5;
+        const py = (e.clientY - r.top) / r.height - 0.5;
+        el.style.transform = `translateY(-6px) rotateX(${-py * 6}deg) rotateY(${px * 8}deg)`;
+    };
 
-  const onLeave = () => {
-    const el = tiltRef.current;
-    if (!el) return;
-    el.style.transform = "";
-  };
+    const onLeave = () => {
+        const el = tiltRef.current;
+        if (!el) return;
+        el.style.transform = "";
+    };
 
-  return (
-    <Link
-      ref={tiltRef}
-      href={`/games/${game.id}`}
-      className="card"
-      onMouseMove={onMove}
-      onMouseLeave={onLeave}
-    >
-      <div className="cover">
-        <CoverArt cover={game.cover} />
-        <div className="label">{game.cat}</div>
-      </div>
-      <div className="meta">
-        <div className="title">{game.title}</div>
-        <div className="desc">{game.short}</div>
-        <div className="row">
-          <div className="score-badge">
-            <span>MEJOR PUNTUACIÓN</span>
-            <b>{formatScore(game.best)}</b>
-          </div>
-          <span
-            className={
-              "btn " +
-              (game.color === "magenta" ? "magenta" : game.color === "yellow" ? "yellow" : "")
-            }
-          >
-            JUGAR
-          </span>
-        </div>
-      </div>
-    </Link>
-  );
+    return (
+        <Link
+            ref={tiltRef}
+            href={`/games/${game.id}`}
+            className="card"
+            onMouseMove={onMove}
+            onMouseLeave={onLeave}
+        >
+            <div className="cover">
+                <CoverArt cover={game.cover} />
+                <div className="label">{game.cat}</div>
+            </div>
+            <div className="meta">
+                <div className="title">{game.title}</div>
+                <div className="desc">{game.short}</div>
+                <div className="row">
+                    <div className="score-badge">
+                        <span>MEJOR PUNTUACIÓN</span>
+                        <b>{formatScore(game.best)}</b>
+                    </div>
+                    <span
+                        className={
+                            "btn " +
+                            (game.color === "magenta"
+                                ? "magenta"
+                                : game.color === "yellow"
+                                  ? "yellow"
+                                  : "")
+                        }
+                    >
+                        JUGAR
+                    </span>
+                </div>
+            </div>
+        </Link>
+    );
 }

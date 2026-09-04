@@ -50,22 +50,28 @@ Tres módulos nuevos bajo `app/lib/`. No hay base de datos ni API.
 // app/lib/games.ts
 export type Category = "ARCADE" | "PUZZLE" | "SHOOTER" | "VERSUS";
 export type CoverArt =
-  | "cover-bricks" | "cover-tetro" | "cover-snake" | "cover-glot"
-  | "cover-invaders" | "cover-rocas" | "cover-rana" | "cover-duelo";
+    | "cover-bricks"
+    | "cover-tetro"
+    | "cover-snake"
+    | "cover-glot"
+    | "cover-invaders"
+    | "cover-rocas"
+    | "cover-rana"
+    | "cover-duelo";
 
 export type Game = {
-  id: string;          // slug de la URL: "bloque-buster", "caida", …
-  title: string;       // "BLOQUE BUSTER"
-  short: string;       // texto de la tarjeta
-  long: string;        // texto de la página de detalle
-  cat: Category;
-  cover: CoverArt;     // clase CSS del generador de portada en globals.css
-  color: "cyan" | "magenta" | "yellow" | "green"; // variante del botón JUGAR
-  best: number;
-  plays: string;       // ya formateado: "12.4K"
+    id: string; // slug de la URL: "bloque-buster", "caida", …
+    title: string; // "BLOQUE BUSTER"
+    short: string; // texto de la tarjeta
+    long: string; // texto de la página de detalle
+    cat: Category;
+    cover: CoverArt; // clase CSS del generador de portada en globals.css
+    color: "cyan" | "magenta" | "yellow" | "green"; // variante del botón JUGAR
+    best: number;
+    plays: string; // ya formateado: "12.4K"
 };
 
-export const GAMES: Game[];                       // los 8 de data.jsx, sin cambios
+export const GAMES: Game[]; // los 8 de data.jsx, sin cambios
 export const CATS: readonly ["TODOS", ...Category[]];
 export function getGame(id: string): Game | undefined;
 ```
@@ -73,10 +79,10 @@ export function getGame(id: string): Game | undefined;
 ```ts
 // app/lib/scores.ts
 export type ScoreRow = {
-  rank: number;
-  name: string;
-  score: number;
-  date: string;   // "07/03/2026"
+    rank: number;
+    name: string;
+    score: number;
+    date: string; // "07/03/2026"
 };
 
 // Portado literal de data.jsx. Determinista: la misma semilla da siempre las mismas filas.
@@ -88,20 +94,23 @@ export function formatScore(n: number): string;
 
 ```ts
 // app/lib/session.tsx
-export type SessionUser = { name: string };          // clave localStorage: "av_user"
-export type StoredScore = {                          // clave localStorage: "av_scores"
-  game: string;   // Game["id"]
-  score: number;
-  name: string;
-  at: number;     // Date.now()
+export type SessionUser = { name: string }; // clave localStorage: "av_user"
+export type StoredScore = {
+    // clave localStorage: "av_scores"
+    game: string; // Game["id"]
+    score: number;
+    name: string;
+    at: number; // Date.now()
 };
 
-export function SessionProvider(props: { children: React.ReactNode }): JSX.Element;
+export function SessionProvider(props: {
+    children: React.ReactNode;
+}): JSX.Element;
 export function useSession(): {
-  user: SessionUser | null;
-  signIn: (user: SessionUser | null) => void;
-  signOut: () => void;
-  saveScore: (entry: Omit<StoredScore, "at">) => void;
+    user: SessionUser | null;
+    signIn: (user: SessionUser | null) => void;
+    signOut: () => void;
+    saveScore: (entry: Omit<StoredScore, "at">) => void;
 };
 ```
 
@@ -235,13 +244,13 @@ Cada paso deja la aplicación compilando y navegable.
 
 ## 7 — Riesgos identificados
 
-| Riesgo | Mitigación |
-| --- | --- |
-| Hidratación: el Nav depende de `localStorage`, que no existe en el servidor | `SessionProvider` arranca con `user = null` y lee `av_user` en `useEffect`. El primer render del cliente coincide con el del servidor y el nombre aparece después de montar. |
-| `toLocaleString("es-ES")` puede formatear distinto en Node y en el navegador | `formatScore` en `app/lib/scores.ts` inserta el separador a mano. Nadie llama a `toLocaleString` en componentes. |
-| El `setInterval` del reproductor sigue vivo al navegar fuera | El `useEffect` devuelve su `clearInterval`, y también se detiene con `paused` o `over`. |
-| `localStorage` lanza excepción en modo privado o con cookies bloqueadas | Toda lectura y escritura va en `try/catch`. Sin persistencia la app sigue funcionando, solo se olvida la sesión. |
-| `.av-bg::before` anima una rejilla en bucle infinito y consume GPU | Fuera de alcance para este spec, pero queda anotado: respetar `prefers-reduced-motion` merece su propio cambio en el tema. |
+| Riesgo                                                                       | Mitigación                                                                                                                                                                   |
+| ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Hidratación: el Nav depende de `localStorage`, que no existe en el servidor  | `SessionProvider` arranca con `user = null` y lee `av_user` en `useEffect`. El primer render del cliente coincide con el del servidor y el nombre aparece después de montar. |
+| `toLocaleString("es-ES")` puede formatear distinto en Node y en el navegador | `formatScore` en `app/lib/scores.ts` inserta el separador a mano. Nadie llama a `toLocaleString` en componentes.                                                             |
+| El `setInterval` del reproductor sigue vivo al navegar fuera                 | El `useEffect` devuelve su `clearInterval`, y también se detiene con `paused` o `over`.                                                                                      |
+| `localStorage` lanza excepción en modo privado o con cookies bloqueadas      | Toda lectura y escritura va en `try/catch`. Sin persistencia la app sigue funcionando, solo se olvida la sesión.                                                             |
+| `.av-bg::before` anima una rejilla en bucle infinito y consume GPU           | Fuera de alcance para este spec, pero queda anotado: respetar `prefers-reduced-motion` merece su propio cambio en el tema.                                                   |
 
 ---
 
