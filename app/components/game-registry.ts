@@ -14,7 +14,7 @@ import type { Game } from "@/app/lib/games";
 
 export type GameComponentProps = { game: Game };
 
-// Loaded on demand, so the five cartridges that are still a CSS animation never
+// Loaded on demand, so the four cartridges that are still a CSS animation never
 // download an engine, and opening one game does not pull in the others'.
 // ssr: false because a canvas game has nothing to render on the server: it
 // needs the DOM from its first frame.
@@ -32,6 +32,10 @@ const BloqueBusterGame = dynamic(
     { ssr: false },
 );
 
+const SnakeGame = dynamic(() => import("@/app/components/snake-game"), {
+    ssr: false,
+});
+
 /** Maps Game["id"] to its playable component. Missing id → fake player. */
 export const GAME_ENGINES: Partial<
     Record<string, ComponentType<GameComponentProps>>
@@ -39,4 +43,5 @@ export const GAME_ENGINES: Partial<
     asteroides: AsteroidesGame,
     caida: CaidaGame,
     "bloque-buster": BloqueBusterGame,
+    snake: SnakeGame,
 };

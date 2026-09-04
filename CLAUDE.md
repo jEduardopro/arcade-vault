@@ -8,10 +8,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Arcade Vault — a platform for playing games online and competing for the highest score.
 Seven routes are built (`/`, `/games`, `/games/[id]`, `/games/[id]/play`, `/login`,
-`/hall-of-fame`, `/about`). The catalogue holds eight cartridges, of which **three really
-play**: ASTEROIDES (SPEC 05), CAÍDA (SPEC 07) and BLOQUE BUSTER (SPEC 08). The other five
-still show the mock player from SPEC 01. The catalogue and every score live in Supabase
-(SPEC 06); the signed-in user is still fake and lives in `localStorage`.
+`/hall-of-fame`, `/about`). The catalogue holds eight cartridges, of which **four really
+play**: ASTEROIDES (SPEC 05), CAÍDA (SPEC 07), BLOQUE BUSTER (SPEC 08) and SNAKE (SPEC 09).
+The other four still show the mock player from SPEC 01. The catalogue and every score live
+in Supabase (SPEC 06); the signed-in user is still fake and lives in `localStorage`.
 
 The README specifies a **spec-driven workflow**: features are designed with `/spec` and then
 built with `/spec-impl`, following the conventions of
@@ -157,12 +157,16 @@ juego nuevo no tiene que redescubrirlos.
   read live, and `takeScoreSlot()` from `app/lib/rate-limit.ts`, five saves per IP every
   five minutes. Same split as the contact form of SPEC 03: pure validation in `app/lib/`,
   and only the action talks to the outside. Every message it returns is a fixed literal.
-- **Ported games live in `app/lib/engines/<game>/` (SPEC 05).** `references/started-games/`
-  held three vanilla-canvas games and all three are ported: `asteroides/` (SPEC 05),
-  `caida/` (SPEC 07) and `bloque-buster/` (SPEC 08), each in `constants.ts` (every tuning
-  number, copied from the original), `entities.ts` (the classes, with `draw(ctx)` taking the
-  context as a parameter) and `engine.ts` (`create<Game>Engine`). Four rules make an engine
-  reusable, and any new port must keep them: **it never imports React**
+- **Games live in `app/lib/engines/<game>/` (SPEC 05).** `references/started-games/` held
+  three vanilla-canvas games and all three are ported: `asteroides/` (SPEC 05), `caida/`
+  (SPEC 07) and `bloque-buster/` (SPEC 08). `snake/` (SPEC 09) is the fourth engine and the
+  first with **no original at all** — that folder holds only a sprite atlas — so every number
+  in its `constants.ts` is a decision of its spec instead of a value copied from a `game.js`,
+  and each one carries the reason. The layout is the same either way: `constants.ts` (every
+  tuning number), `entities.ts` (the classes, with `draw(ctx)` taking the context as a
+  parameter) and `engine.ts` (`create<Game>Engine`), plus an optional fourth file that
+  isolates an asset — `sound.ts` in `bloque-buster/`, `sprites.ts` in `snake/`. Four rules
+  make an engine reusable, and any new game must keep them: **it never imports React**
   (`grep -rn 'from "react"' app/lib/engines` must stay empty) and knows no DOM beyond its own
   canvas and the window it listens to for keys; **it draws no HUD and no overlays**,
   publishing `snapshot` and `status` through callbacks so React paints them; **`snapshot` is
@@ -176,36 +180,43 @@ juego nuevo no tiene que redescubrirlos.
   stretches the canvas over `.crt-screen` and the factor changes with the window. Its
   `MAX_DT` is `0.02` and not the `0.05` of the other two: it is the first engine whose
   gameplay is continuous collision, and a longer tick lets the ball skip through a block.
-- **The engine's world does not have to be the playfield (SPEC 07).** All three engines
+- **The engine's world does not have to be the playfield (SPEC 07).** All four engines
   reason in a fixed 800×600 world, which is the `aspect-ratio: 4 / 3` of `.crt-screen`, so
   `.game-canvas` covers it and no CSS is needed. Tetris's board is 300×600, so `caida/` draws
   that well centred at `x: 250` and leaves the gutters empty except for the next-piece box on
   the right — cheaper than a letterbox rule in `app/globals.css`, which is a literal port. A
   game with no lives passes `lives: 0` and the shell renders `—`; one with no levels passes
   `1`.
-- **A port is not a copy (SPEC 07, SPEC 08).** Sprite sheets stay out: `caida/` repaints the
-  seven tetrominoes with the `:root` tokens, and `bloque-buster/` drops the original's
-  spritesheet and draws paddle, ball and blocks with canvas primitives, so no engine needs a
-  loading gate before its first frame. What the original drew in-canvas and the shell already
-  provides — pause overlays, end screens, restart buttons, level pickers — is deleted rather
-  than ported.
+- **A port is not a copy (SPEC 07, SPEC 08).** A sprite sheet inherited from an original
+  stays out: `caida/` repaints the seven tetrominoes with the `:root` tokens, and
+  `bloque-buster/` drops the original's spritesheet and draws paddle, ball and blocks with
+  canvas primitives. What the original drew in-canvas and the shell already provides — pause
+  overlays, end screens, restart buttons, level pickers — is deleted rather than ported.
+- **A loading gate is allowed when the asset _is_ the game (SPEC 09).** SNAKE eats fruit
+  drawn from a sprite sheet, so `snake/sprites.ts` waits for the image before the first
+  frame — the only engine that does. It waits with a net, and any future gate must copy the
+  shape: `onReady` fires on `error` as well as on `load`, so a 404 costs the sprite and never
+  the game; the fruit falls back to a vector core; and the flag that opens the gate is also
+  checked for an image already in the browser cache, which resolves **synchronously** inside
+  the factory, before `sheet` and `handle` are assigned.
 - **BLOQUE BUSTER is the only cartridge that makes a sound (SPEC 08).** Its two effects are
-  the original's `.mp3`, copied unchanged into `public/games/bloque-buster/` — the only
-  binary assets any cartridge loads — and played from `app/lib/engines/bloque-buster/sound.ts`
+  the original's `.mp3`, copied unchanged into `public/games/bloque-buster/` — the only audio
+  a cartridge loads, though no longer the only binary: SNAKE ships a PNG (SPEC 09) — and
+  played from `app/lib/engines/bloque-buster/sound.ts`
   at the same five points `game.js` plays them: the three walls, the paddle, and a block
   going. Each effect keeps a small pool of voices so overlapping hits do not cut each other
   off, `play()`'s rejection is swallowed because autoplay policy can refuse a sound before the
   player's first gesture, and `destroy()` silences them. **Platform audio is still unbuilt**:
-  there is no remembered mute, no control in `PlayerShell`, and ASTEROIDES and CAÍDA stay
-  silent. Adding those is its own spec; do not grow the shell's props for it here.
+  there is no remembered mute, no control in `PlayerShell`, and ASTEROIDES, CAÍDA and SNAKE
+  stay silent. Adding those is its own spec; do not grow the shell's props for it here.
 - **A game is plugged in at `app/components/game-registry.ts`.** `GAME_ENGINES` maps a
   `Game["id"]` to its component, lazily via `next/dynamic` with `ssr: false` (a canvas game
   has nothing to render on the server). `game-player.tsx` is only the dispatcher: a
   registered id mounts its real game, anything else falls back to `fake-game-player.tsx`,
   the automatic-score mock from SPEC 01. The registry holds React components, so it lives
-  under `app/components/` and not beside the engines, which stay framework-free. Three ids
-  are registered today, `asteroides`, `caida` and `bloque-buster`; every port so far has cost
-  exactly one `dynamic()` and one map entry, and nothing on `/games/[id]/play` changes.
+  under `app/components/` and not beside the engines, which stay framework-free. Four ids are
+  registered today, `asteroides`, `caida`, `bloque-buster` and `snake`; every game so far has
+  cost exactly one `dynamic()` and one map entry, and nothing on `/games/[id]/play` changes.
 - **The player screen's chrome is `app/components/player-shell.tsx`.** HUD bar, CRT frame,
   pause overlay and end modal with the score-saving flow belong to the screen, not to any
   game: a game passes numbers in and renders its canvas as `children`. The end modal saves
