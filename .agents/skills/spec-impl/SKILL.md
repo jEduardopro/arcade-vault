@@ -105,56 +105,56 @@ Once you have confirmed the state means `Approved`:
 
 0. **Check the working tree first.** Look at the `git status --short` output in the session context above. If it is **not empty**, stop and show the pending changes, then ask:
 
-   ```
-   ⚠️ There are uncommitted changes in the working tree.
-   Switching branches would carry them over. What do you want to do?
-     1. Commit or stash them yourself, then re-run this command  (recommended)
-     2. Continue anyway — the changes travel to the new branch
-   ```
+    ```
+    ⚠️ There are uncommitted changes in the working tree.
+    Switching branches would carry them over. What do you want to do?
+      1. Commit or stash them yourself, then re-run this command  (recommended)
+      2. Continue anyway — the changes travel to the new branch
+    ```
 
-   Wait for the answer. **Do not stash or commit on the user's behalf** unless they explicitly ask for it. If the working tree is clean, skip straight to step 1 without mentioning it.
+    Wait for the answer. **Do not stash or commit on the user's behalf** unless they explicitly ask for it. If the working tree is clean, skip straight to step 1 without mentioning it.
 
 1. Derive the branch name from the spec file's full name, without the extension. Format: `spec-NN-slug`. Examples:
 
-   - `01-mvp-arkanoid.md` → branch `spec-01-mvp-arkanoid`
-   - `02-powerups.md` → branch `spec-02-powerups`
+    - `01-mvp-arkanoid.md` → branch `spec-01-mvp-arkanoid`
+    - `02-powerups.md` → branch `spec-02-powerups`
 
 2. Read the `AutoCreateBranch` flag from the **Branch-creation config** shown in the session context above.
 
-   - If the config file does not exist, the value is missing, or the value is unrecognized → treat it as `true` (the default).
-   - Only an explicit `false` (in any capitalization) disables automatic branch creation.
+    - If the config file does not exist, the value is missing, or the value is unrecognized → treat it as `true` (the default).
+    - Only an explicit `false` (in any capitalization) disables automatic branch creation.
 
-   **If `AutoCreateBranch` is `true` (default):** proceed without asking.
+    **If `AutoCreateBranch` is `true` (default):** proceed without asking.
 
-   - If the branch **does not exist**: create it with `git checkout -b spec-NN-slug`.
-   - If it **already exists**: this means previous work is being resumed. Switch to it, read `git log --oneline` on the branch, and tell the user which steps of the plan already look done and which step you propose to resume from. Wait for confirmation on the resume point before implementing anything.
-   - In both cases: switch to the branch with `git checkout spec-NN-slug` and confirm the change was successful before continuing.
+    - If the branch **does not exist**: create it with `git checkout -b spec-NN-slug`.
+    - If it **already exists**: this means previous work is being resumed. Switch to it, read `git log --oneline` on the branch, and tell the user which steps of the plan already look done and which step you propose to resume from. Wait for confirmation on the resume point before implementing anything.
+    - In both cases: switch to the branch with `git checkout spec-NN-slug` and confirm the change was successful before continuing.
 
-   **If `AutoCreateBranch` is `false`:** ask before touching git. Show:
+    **If `AutoCreateBranch` is `false`:** ask before touching git. Show:
 
-   ```
-   AutoCreateBranch is set to false.
-   Create and switch to the branch spec-NN-slug? [y/N]
-   ```
+    ```
+    AutoCreateBranch is set to false.
+    Create and switch to the branch spec-NN-slug? [y/N]
+    ```
 
-   - If the user answers **yes**: create/switch to the branch exactly as in the `true` case above.
-   - If the user answers **no** or leaves it empty: **do not create any branch.** Tell the user you will implement on the current branch (the one shown in the session context above) and ask for explicit confirmation to continue there. Do not improvise — wait for the answer.
+    - If the user answers **yes**: create/switch to the branch exactly as in the `true` case above.
+    - If the user answers **no** or leaves it empty: **do not create any branch.** Tell the user you will implement on the current branch (the one shown in the session context above) and ask for explicit confirmation to continue there. Do not improvise — wait for the answer.
 
 3. Visually confirm to the user the spec is ready and which branch is active:
 
-   ```
-   ✅ Ready to implement.
+    ```
+    ✅ Ready to implement.
 
-   Spec:   specs/NN-slug.md
-   Branch: spec-NN-slug  (active)   (← or the current branch, if no new branch was created)
-   State:  Approved   (← echo back the actual value found in the spec)
-   ```
+    Spec:   specs/NN-slug.md
+    Branch: spec-NN-slug  (active)   (← or the current branch, if no new branch was created)
+    State:  Approved   (← echo back the actual value found in the spec)
+    ```
 
 4. **Do not start implementing yet.** First show the spec summary to the user so they have it fresh. Extract and show:
-   - The **objective** (the line after `**Objective:**` / `**Objetivo:**` / equivalent label).
-   - The **scope** (the `## Scope` / `## Alcance` / equivalent section).
-   - The **implementation plan** (the section with the numbered steps — `## Implementation plan` / `## Plan de implementación` / equivalent).
-   - The **acceptance criteria** (the checklist — `## Acceptance criteria` / `## Criterios de aceptación` / equivalent).
+    - The **objective** (the line after `**Objective:**` / `**Objetivo:**` / equivalent label).
+    - The **scope** (the `## Scope` / `## Alcance` / equivalent section).
+    - The **implementation plan** (the section with the numbered steps — `## Implementation plan` / `## Plan de implementación` / equivalent).
+    - The **acceptance criteria** (the checklist — `## Acceptance criteria` / `## Criterios de aceptación` / equivalent).
 
 Match section headings by meaning, not by exact wording — the spec may be authored in any language.
 

@@ -2,7 +2,7 @@
 name: spec
 description: Designs and develops specs following the spec-driven method. Asks clarifying questions before proposing structure, and builds the spec section by section. Use it when starting a large feature, before writing code.
 disable-model-invocation: true
-argument-hint: 'short feature description or requirement'
+argument-hint: "short feature description or requirement"
 allowed-tools: Read, Glob, Grep, Write, AskUserQuestion, Bash(ls:*), Bash(cat:*), Bash(date:*)
 ---
 
@@ -118,21 +118,21 @@ When the content is ready (either because you had everything, or because all sec
 6. If the header lists dependencies (`**Depends on:** SPEC 01`), check that each referenced spec actually exists in `specs/`. If one does not, say so instead of writing a dangling reference.
 7. **Seed the config file if it does not exist.** Check for `specs/.spec-config.yml`. If it is **missing**, create it with the default content below. If it **already exists, leave it untouched** — never overwrite the user's settings.
 
-   ```yaml
-   # spec workflow configuration
-   #
-   # AutoCreateBranch — controls whether /spec-impl creates the git branch automatically.
-   #   true  (default) → /spec-impl creates and switches to spec-NN-slug without asking
-   #   false           → /spec-impl asks for [y/N] confirmation before creating the branch
-   AutoCreateBranch: true
-   ```
+    ```yaml
+    # spec workflow configuration
+    #
+    # AutoCreateBranch — controls whether /spec-impl creates the git branch automatically.
+    #   true  (default) → /spec-impl creates and switches to spec-NN-slug without asking
+    #   false           → /spec-impl asks for [y/N] confirmation before creating the branch
+    AutoCreateBranch: true
+    ```
 
 8. Confirm to the user:
-   - Path of the created file.
-   - Reminder: the spec is in `Draft` state. Change it to `Approved` once you have re-read it.
-   - If you just created `specs/.spec-config.yml`, mention it exists and that `AutoCreateBranch` defaults to `true` (set it to `false` to control branch creation yourself).
-   - Next step: once reviewed and approved, run `/spec-impl NN-slug` to implement it.
-   - **Stop here.** Do not propose implementing the spec, writing code, or taking any further action beyond this confirmation.
+    - Path of the created file.
+    - Reminder: the spec is in `Draft` state. Change it to `Approved` once you have re-read it.
+    - If you just created `specs/.spec-config.yml`, mention it exists and that `AutoCreateBranch` defaults to `true` (set it to `false` to control branch creation yourself).
+    - Next step: once reviewed and approved, run `/spec-impl NN-slug` to implement it.
+    - **Stop here.** Do not propose implementing the spec, writing code, or taking any further action beyond this confirmation.
 
 ## Hard rules
 

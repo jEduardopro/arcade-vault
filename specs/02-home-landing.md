@@ -64,41 +64,41 @@ export type AccentColor = "cyan" | "magenta" | "yellow" | "green";
 export type FeatureIconKind = "GAMEPAD" | "FREE" | "TROPHY" | "ROCKET";
 
 export type HomeFeature = {
-  icon: FeatureIconKind;
-  title: string;   // "JUEGOS CLÁSICOS"
-  desc: string;
-  color: AccentColor;
+    icon: FeatureIconKind;
+    title: string; // "JUEGOS CLÁSICOS"
+    desc: string;
+    color: AccentColor;
 };
 
 export type TickerRow = {
-  player: string;  // "NEONFOX"
-  game: string;    // "Caída"
-  score: number;   // 184220
-  ago: string;     // "hace 2 min"
-  color: AccentColor;
+    player: string; // "NEONFOX"
+    game: string; // "Caída"
+    score: number; // 184220
+    ago: string; // "hace 2 min"
+    color: AccentColor;
 };
 
 export type TopRow = {
-  rank: number;    // 1..5
-  player: string;
-  score: number;
+    rank: number; // 1..5
+    player: string;
+    score: number;
 };
 
 export type HomeStat = {
-  n: string;       // "8+", "MILES", "GLOBAL"
-  unit: string;    // "JUEGOS"
-  sub: string;     // "Y CONTANDO"
+    n: string; // "8+", "MILES", "GLOBAL"
+    unit: string; // "JUEGOS"
+    sub: string; // "Y CONTANDO"
 };
 
 export type FaqItem = { q: string; a: string };
 
-export const HOME_FEATURES: readonly HomeFeature[];   // los 4 de home.jsx
-export const HOME_TICKER: readonly TickerRow[];       // las 7 filas
-export const HOME_TOP: readonly TopRow[];             // las 5 filas
-export const HOME_STATS: readonly HomeStat[];         // 3; el primero usa `${GAMES.length}+`
-export const HOME_FAQ: readonly FaqItem[];            // las 3 preguntas
-export const PLAN_PERKS: readonly string[];           // los 6 «✔ …» del plan
-export const PREVIEW_COUNT = 6;                       // GAMES.slice(0, PREVIEW_COUNT)
+export const HOME_FEATURES: readonly HomeFeature[]; // los 4 de home.jsx
+export const HOME_TICKER: readonly TickerRow[]; // las 7 filas
+export const HOME_TOP: readonly TopRow[]; // las 5 filas
+export const HOME_STATS: readonly HomeStat[]; // 3; el primero usa `${GAMES.length}+`
+export const HOME_FAQ: readonly FaqItem[]; // las 3 preguntas
+export const PLAN_PERKS: readonly string[]; // los 6 «✔ …» del plan
+export const PREVIEW_COUNT = 6; // GAMES.slice(0, PREVIEW_COUNT)
 ```
 
 Convenciones:
@@ -287,16 +287,16 @@ Cada paso deja la aplicación compilando y navegable.
 
 ## 7 — Riesgos identificados
 
-| Riesgo | Mitigación |
-| --- | --- |
-| `.reveal` arranca en `opacity: 0`: si el JS no corre, la landing se queda en blanco por debajo del hero | Bloque `<noscript>` que fuerza `.reveal { opacity: 1; transform: none; }`, y revelado inmediato cuando falta `IntersectionObserver`. |
-| Con `prefers-reduced-motion` el usuario podría quedarse sin ver el contenido si el observer no dispara | `<Reveal>` comprueba el `matchMedia` antes de observar y añade `in` en el primer efecto. |
-| Mover la Biblioteca de `/` a `/games` deja enlaces internos apuntando a la landing | El paso 4 enumera los siete puntos exactos (`nav.tsx` ×2, `hall-board.tsx:118`, `games/[id]/page.tsx:70`, `not-found.tsx:40`, `game-player.tsx:151`, `auth-form.tsx` ×2). Los criterios de aceptación los verifican uno a uno. |
-| El re-port de `globals.css` podría alterar pantallas ya aprobadas | El `diff` entre los dos `styles.css` no tiene ni una línea eliminada ni modificada: solo añadidos. Se verifica visualmente las cinco rutas de SPEC 01 tras el paso 1. |
-| `.tick-row` arranca en `opacity: 0` con `animation: … forwards`; una futura regla global de reduced-motion que anule animaciones dejaría el ticker invisible | Anotado. Hoy el tema no tiene esa regla; cuando se aborde `prefers-reduced-motion` en el tema (pendiente de SPEC 01) habrá que dar a `.tick-row` un estado final explícito. |
-| Ocho siluetas SVG con `float` infinito más la rejilla animada de `.av-bg` en la misma pantalla | Son transformaciones compuestas sobre elementos pequeños. Queda anotado junto al riesgo de GPU que ya registró SPEC 01. |
-| Los criterios de aceptación de SPEC 01 que dicen «`/` muestra las 8 tarjetas» quedan obsoletos | Se leen sustituyendo `/` por `/games`. SPEC 01 sigue marcado como `Implemented`; este spec es la enmienda. |
-| Leer `searchParams` convierte `/login` en dinámica | Aceptado: es una pantalla de acceso, no se beneficia del prerender estático. |
+| Riesgo                                                                                                                                                       | Mitigación                                                                                                                                                                                                                     |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `.reveal` arranca en `opacity: 0`: si el JS no corre, la landing se queda en blanco por debajo del hero                                                      | Bloque `<noscript>` que fuerza `.reveal { opacity: 1; transform: none; }`, y revelado inmediato cuando falta `IntersectionObserver`.                                                                                           |
+| Con `prefers-reduced-motion` el usuario podría quedarse sin ver el contenido si el observer no dispara                                                       | `<Reveal>` comprueba el `matchMedia` antes de observar y añade `in` en el primer efecto.                                                                                                                                       |
+| Mover la Biblioteca de `/` a `/games` deja enlaces internos apuntando a la landing                                                                           | El paso 4 enumera los siete puntos exactos (`nav.tsx` ×2, `hall-board.tsx:118`, `games/[id]/page.tsx:70`, `not-found.tsx:40`, `game-player.tsx:151`, `auth-form.tsx` ×2). Los criterios de aceptación los verifican uno a uno. |
+| El re-port de `globals.css` podría alterar pantallas ya aprobadas                                                                                            | El `diff` entre los dos `styles.css` no tiene ni una línea eliminada ni modificada: solo añadidos. Se verifica visualmente las cinco rutas de SPEC 01 tras el paso 1.                                                          |
+| `.tick-row` arranca en `opacity: 0` con `animation: … forwards`; una futura regla global de reduced-motion que anule animaciones dejaría el ticker invisible | Anotado. Hoy el tema no tiene esa regla; cuando se aborde `prefers-reduced-motion` en el tema (pendiente de SPEC 01) habrá que dar a `.tick-row` un estado final explícito.                                                    |
+| Ocho siluetas SVG con `float` infinito más la rejilla animada de `.av-bg` en la misma pantalla                                                               | Son transformaciones compuestas sobre elementos pequeños. Queda anotado junto al riesgo de GPU que ya registró SPEC 01.                                                                                                        |
+| Los criterios de aceptación de SPEC 01 que dicen «`/` muestra las 8 tarjetas» quedan obsoletos                                                               | Se leen sustituyendo `/` por `/games`. SPEC 01 sigue marcado como `Implemented`; este spec es la enmienda.                                                                                                                     |
+| Leer `searchParams` convierte `/login` en dinámica                                                                                                           | Aceptado: es una pantalla de acceso, no se beneficia del prerender estático.                                                                                                                                                   |
 
 ---
 
