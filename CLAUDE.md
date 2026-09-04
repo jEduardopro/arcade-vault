@@ -10,8 +10,8 @@ Arcade Vault — a platform for playing games online and competing for the highe
 Seven routes are built (`/`, `/games`, `/games/[id]`, `/games/[id]/play`, `/login`,
 `/hall-of-fame`, `/about`). The catalogue holds eight cartridges, of which **ASTEROIDES is
 the only one that really plays** (SPEC 05); the other seven still show the mock player from
-SPEC 01. The leaderboard is seeded fake data and the signed-in user lives in
-`localStorage` — Supabase is wired up (SPEC 04) but no table exists yet.
+SPEC 01. The catalogue and every score live in Supabase (SPEC 06); the signed-in user is
+still fake and lives in `localStorage`.
 
 The README specifies a **spec-driven workflow**: features are designed with `/spec` and then
 built with `/spec-impl`, following the conventions of
@@ -112,14 +112,46 @@ Usa siempre /frontend-design para diseñar la interfaz de usuario.
   (`--font-courier-prime`), which together back the `--mono` body stack. Use the `--pixel`
   / `--mono` variables (or the `font-pixel` / `font-mono` utilities), not the raw families.
 - TypeScript is `strict`, and `@/*` maps to the repo root (e.g. `@/app/...`).
-- **Supabase lives in `app/lib/supabase/` (SPEC 04).** `client.ts` exports `createClient()`
-  for Client Components; `server.ts` exports an **async** `createClient()` — `cookies()` is
-  async in Next 16 — for Server Components, Server Actions and Route Handlers. Both are
-  functions, never shared singletons: the server one is bound to its request's cookies.
+- **Supabase lives in `app/lib/supabase/` (SPEC 04, SPEC 06).** Three clients, all
+  functions and never shared singletons: `client.ts` for Client Components; `server.ts`, an
+  **async** `createClient()` — `cookies()` is async in Next 16 — bound to its request's
+  cookies, for Server Components, Server Actions and Route Handlers; and `public.ts`,
+  `createPublicClient()`, cookie-less, for public reads. Use the public one for anything
+  inside `unstable_cache`, which forbids the request APIs, and the server one to write.
   `types.ts` is generated, not hand-written — regenerate it with the Supabase MCP server's
   `generate_typescript_types` on every schema change. There is no session-refreshing
   `proxy.ts` yet; it arrives with the auth spec, and in Next 16 that file is `proxy.ts`,
   not the deprecated `middleware.ts`.
+- **The schema is SQL in `supabase/migrations/` (SPEC 06).** One file per change, named
+  `<timestamp>_<snake_case_description>.sql`, applied with the MCP server's
+  `apply_migration` under that same description. The server assigns the timestamp, so
+  rename the local file to the version `list_migrations` reports and the repository and the
+  remote registry stay identical. Seeds use `on conflict do nothing`, which means seeded
+  rows need literal ids — a `gen_random_uuid()` primary key can never conflict, so
+  re-applying would duplicate. `public.games` has no write policy at all: the catalogue is
+  edited here and nowhere else. `public.scores` accepts anonymous inserts and nothing else,
+  so a saved row is immutable from the API. Every view is declared
+  `with (security_invoker = true)`, or it bypasses the RLS of the tables it reads.
+- **Pure modules and query modules are split (SPEC 06).** `app/lib/games.ts` and
+  `app/lib/scores.ts` are dependency-free — types, `CATS`, `formatScore`, `formatDate`,
+  `validateScore` — so a client island can import them; the reads live in
+  `app/lib/catalogue.ts` (`getGames`, `getGame`) and `app/lib/leaderboard.ts`
+  (`getLeaderboard`, `getLeaderboards`). Keep that boundary: importing a query module from
+  a Client Component ships supabase-js to the browser, which is 234 KB of a chunk nobody
+  needs. It is the same rule `app/lib/contact.ts` follows since SPEC 03.
+- **The catalogue is cached, the scores are not (SPEC 06).** `catalogue.ts` wraps its reads
+  in `unstable_cache` under the `games` tag (`use cache` is unavailable: `next.config.ts`
+  does not enable `cacheComponents`). Boards are read fresh, and the two routes that show
+  them — `/hall-of-fame` and `/games/[id]` — declare `export const dynamic = "force-dynamic"`.
+  After an insert, `app/actions/scores.ts` calls `revalidateTag("games", { expire: 0 })`:
+  in Next 16 `revalidateTag` takes a second argument, and `updateTag` only reaches tags set
+  by `use cache`.
+- **A score is saved through `app/actions/scores.ts` (SPEC 06).** RLS lets anyone insert —
+  there is no identity until the auth spec — so the action is what protects the table:
+  `validateScore()` mirroring the `CHECK` constraints, the game's own `max_score` ceiling
+  read live, and `takeScoreSlot()` from `app/lib/rate-limit.ts`, five saves per IP every
+  five minutes. Same split as the contact form of SPEC 03: pure validation in `app/lib/`,
+  and only the action talks to the outside. Every message it returns is a fixed literal.
 - **Ported games live in `app/lib/engines/<game>/` (SPEC 05).** `references/started-games/`
   holds three vanilla-canvas games; ASTEROIDES is the first one ported, in `constants.ts`
   (every tuning number, copied from the original), `entities.ts` (the classes, with
@@ -139,5 +171,7 @@ Usa siempre /frontend-design para diseñar la interfaz de usuario.
   under `app/components/` and not beside the engines, which stay framework-free.
 - **The player screen's chrome is `app/components/player-shell.tsx`.** HUD bar, CRT frame,
   pause overlay and end modal with the score-saving flow belong to the screen, not to any
-  game: a game passes numbers in and renders its canvas as `children`. Scores still go to
-  `localStorage` through `saveScore()`; Supabase is a later spec.
+  game: a game passes numbers in and renders its canvas as `children`. The end modal saves
+  through the `submitScore` action (SPEC 06); its `SaveScoreForm` is remounted with a new
+  `key` on every run, because `useActionState` has no reset and a second run would open
+  already showing "PUNTUACIÓN GUARDADA".

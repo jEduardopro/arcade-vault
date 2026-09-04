@@ -10,9 +10,10 @@
 // the values now come from props.
 
 import Link from "next/link";
-import { useState } from "react";
+import { useActionState, useState } from "react";
+import { submitScore } from "@/app/actions/scores";
 import type { Game } from "@/app/lib/games";
-import { formatScore } from "@/app/lib/scores";
+import { formatScore, PLAYER_MAX, SCORE_IDLE } from "@/app/lib/scores";
 import { useSession } from "@/app/lib/session";
 
 export type PlayerShellProps = {
@@ -45,15 +46,17 @@ export function PlayerShell({
     onRestart,
     children,
 }: PlayerShellProps) {
-    const { user, saveScore } = useSession();
-    const [saved, setSaved] = useState(false);
+    const { user } = useSession();
     // null means "untouched", so the field follows the session until it is edited.
     const [editedName, setEditedName] = useState<string | null>(null);
+    // Bumped on every restart. The form below owns the action state, so a new
+    // key gives the new run a clean one instead of a stale "already saved".
+    const [runId, setRunId] = useState(0);
 
     const name = editedName ?? user?.name ?? "INVITADO";
 
     const restart = () => {
-        setSaved(false);
+        setRunId((id) => id + 1);
         onRestart();
     };
 
@@ -146,38 +149,13 @@ export function PlayerShell({
                         <h2>FIN DEL JUEGO</h2>
                         <div className="final-label">PUNTUACIÓN FINAL</div>
                         <div className="final">{formatScore(score)}</div>
-                        {!saved ? (
-                            <div className="input-row">
-                                <input
-                                    value={name}
-                                    onChange={(e) =>
-                                        setEditedName(
-                                            e.target.value
-                                                .toUpperCase()
-                                                .slice(0, 10),
-                                        )
-                                    }
-                                    placeholder="TUS INICIALES"
-                                />
-                                <button
-                                    className="btn yellow"
-                                    onClick={() => {
-                                        saveScore({
-                                            game: game.id,
-                                            score,
-                                            name,
-                                        });
-                                        setSaved(true);
-                                    }}
-                                >
-                                    GUARDAR PUNTUACIÓN
-                                </button>
-                            </div>
-                        ) : (
-                            <div className="toast-saved">
-                                ▸ PUNTUACIÓN GUARDADA_
-                            </div>
-                        )}
+                        <SaveScoreForm
+                            key={runId}
+                            gameId={game.id}
+                            score={score}
+                            name={name}
+                            onNameChange={setEditedName}
+                        />
                         <div className="actions">
                             <button className="btn" onClick={restart}>
                                 JUGAR DE NUEVO
@@ -190,5 +168,70 @@ export function PlayerShell({
                 </div>
             )}
         </div>
+    );
+}
+
+// The end-of-run save, split out so each run gets its own action state: the
+// shell remounts it with a new key on JUGAR DE NUEVO, and a saved run does not
+// leave the next one showing "already saved".
+//
+// The name is not owned here — the HUD shows it too, so it stays in the shell
+// and comes down as value + handler.
+function SaveScoreForm({
+    gameId,
+    score,
+    name,
+    onNameChange,
+}: {
+    gameId: string;
+    score: number;
+    name: string;
+    onNameChange: (name: string) => void;
+}) {
+    const [state, formAction, pending] = useActionState(
+        submitScore,
+        SCORE_IDLE,
+    );
+
+    if (state.status === "saved") {
+        return <div className="toast-saved">▸ PUNTUACIÓN GUARDADA_</div>;
+    }
+
+    return (
+        <>
+            {state.status === "failed" && (
+                <div
+                    className="mono"
+                    style={{
+                        marginTop: 14,
+                        fontSize: 11,
+                        color: "var(--magenta)",
+                        letterSpacing: "0.08em",
+                    }}
+                >
+                    ▸ {state.message}
+                </div>
+            )}
+            {/* Same .input-row box as the reference, now a form so the action
+                gets the three fields and the button gets its pending state. */}
+            <form className="input-row" action={formAction}>
+                <input type="hidden" name="gameId" value={gameId} />
+                <input type="hidden" name="score" value={score} />
+                <input
+                    name="player"
+                    value={name}
+                    maxLength={PLAYER_MAX}
+                    onChange={(e) =>
+                        onNameChange(
+                            e.target.value.toUpperCase().slice(0, PLAYER_MAX),
+                        )
+                    }
+                    placeholder="TUS INICIALES"
+                />
+                <button className="btn yellow" disabled={pending}>
+                    {pending ? "GUARDANDO…" : "GUARDAR PUNTUACIÓN"}
+                </button>
+            </form>
+        </>
     );
 }

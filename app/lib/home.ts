@@ -1,9 +1,7 @@
 // Mock content of the landing, ported from references/templates/home-about/home.jsx.
 // Every literal is copied word for word so the page matches the reference; the
-// only derived value is the game count, which reads the real catalogue instead
-// of the reference's hardcoded "12+".
-
-import { GAMES } from "@/app/lib/games";
+// only derived value is the game count, which comes from the real catalogue
+// instead of the reference's hardcoded "12+".
 
 export type AccentColor = "cyan" | "magenta" | "yellow" | "green";
 export type FeatureIconKind = "GAMEPAD" | "FREE" | "TROPHY" | "ROCKET";
@@ -125,12 +123,16 @@ export const HOME_TOP: readonly TopRow[] = [
 ];
 
 // The reference announced a flat "12+"; the catalogue is the source of truth so
-// the landing cannot promise games the library does not have.
-export const HOME_STATS: readonly HomeStat[] = [
-    { n: `${GAMES.length}+`, unit: "JUEGOS", sub: "Y CONTANDO" },
-    { n: "MILES", unit: "DE PARTIDAS", sub: "JUGADAS CADA DÍA" },
-    { n: "GLOBAL", unit: "RANKING", sub: "COMPITE CON EL MUNDO" },
-];
+// the landing cannot promise games the library does not have. It is a function
+// and not a constant because that catalogue is now a query: the page counts the
+// rows it received and passes the number in.
+export function homeStats(gameCount: number): readonly HomeStat[] {
+    return [
+        { n: `${gameCount}+`, unit: "JUEGOS", sub: "Y CONTANDO" },
+        { n: "MILES", unit: "DE PARTIDAS", sub: "JUGADAS CADA DÍA" },
+        { n: "GLOBAL", unit: "RANKING", sub: "COMPITE CON EL MUNDO" },
+    ];
+}
 
 export const HOME_FAQ: readonly FaqItem[] = [
     {

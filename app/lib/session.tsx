@@ -1,22 +1,18 @@
 "use client";
 
 // Fake session, ported from the handlers in references/templates/app.jsx.
-// There is no backend: the signed-in user lives in localStorage under "av_user"
-// and saved scores under "av_scores".
+// There is no backend: the signed-in user lives in localStorage under "av_user".
+//
+// Scores used to live here too, under "av_scores". Since SPEC 06 they are rows
+// in Supabase, written by the submitScore action, so nothing in this file reads
+// or writes them any more. Whatever an old visit left under that key stays there
+// as inert history.
 
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 
 export type SessionUser = { name: string };
 
-export type StoredScore = {
-    game: string; // Game["id"]
-    score: number;
-    name: string;
-    at: number; // Date.now()
-};
-
 const USER_KEY = "av_user";
-const SCORES_KEY = "av_scores";
 
 // The signed-in user is external state (localStorage), so it lives in a module
 // store read through useSyncExternalStore instead of component state. The
@@ -77,7 +73,6 @@ type SessionValue = {
     user: SessionUser | null;
     signIn: (user: SessionUser | null) => void;
     signOut: () => void;
-    saveScore: (entry: Omit<StoredScore, "at">) => void;
 };
 
 // Kept as a provider so the mounting point stays where the spec puts it, and so
@@ -99,20 +94,5 @@ export function useSession(): SessionValue {
     );
     const signOut = useCallback(() => setStoredUser(null), []);
 
-    const saveScore = useCallback((entry: Omit<StoredScore, "at">) => {
-        try {
-            const all = JSON.parse(
-                localStorage.getItem(SCORES_KEY) || "[]",
-            ) as StoredScore[];
-            all.push({ ...entry, at: Date.now() });
-            localStorage.setItem(SCORES_KEY, JSON.stringify(all));
-        } catch {
-            // Ignore: the score is lost but the run keeps working.
-        }
-    }, []);
-
-    return useMemo(
-        () => ({ user, signIn, signOut, saveScore }),
-        [user, signIn, signOut, saveScore],
-    );
+    return useMemo(() => ({ user, signIn, signOut }), [user, signIn, signOut]);
 }

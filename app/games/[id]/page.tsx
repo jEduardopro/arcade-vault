@@ -3,29 +3,34 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CoverArt } from "@/app/components/cover-art";
 import { Leaderboard } from "@/app/components/leaderboard";
-import { getGame } from "@/app/lib/games";
-import { formatScore, seededScores } from "@/app/lib/scores";
+import { getGame } from "@/app/lib/catalogue";
+import { getLeaderboard } from "@/app/lib/leaderboard";
+import { DETAIL_BOARD_SIZE, formatScore } from "@/app/lib/scores";
+
+// A mark saved in the player screen has to be here when you come back, so the
+// board is read on every request instead of being served from a prerender.
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
     params,
 }: PageProps<"/games/[id]">): Promise<Metadata> {
     const { id } = await params;
-    const game = getGame(id);
+    const game = await getGame(id);
     if (!game) return { title: "Cartucho no encontrado" };
     return { title: game.title, description: game.short };
 }
 
-// Detail screen of references/templates/detalle.jsx. Everything here is static
-// text, so the whole page is a Server Component.
+// Detail screen of references/templates/detalle.jsx. Everything here is copy
+// from the catalogue plus the game's board, so the whole page is a Server
+// Component.
 export default async function GameDetailPage({
     params,
 }: PageProps<"/games/[id]">) {
     const { id } = await params;
-    const game = getGame(id);
+    const game = await getGame(id);
     if (!game) notFound();
 
-    // Same seed as the reference, so the rows match the original screen.
-    const scores = seededScores(id.length * 17 + 3, 10);
+    const scores = await getLeaderboard(id, DETAIL_BOARD_SIZE);
 
     return (
         <main className="av-main">

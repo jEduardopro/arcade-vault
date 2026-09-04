@@ -1,6 +1,12 @@
-// Mock leaderboard rows, ported from references/templates/data.jsx.
-// Deterministic on purpose: the same seed always yields the same rows, so the
-// server and the client render identical markup.
+// The shape of a leaderboard row, its formatting and its validation (SPEC 06).
+//
+// Deliberately dependency-free — no Supabase client, no next/* imports — so the
+// client islands that render a score and the modal that saves one can import
+// this without dragging the query layer into the browser bundle. Same boundary
+// SPEC 03 drew with app/lib/contact.ts.
+//
+// The rows themselves are read in app/lib/leaderboard.ts, and the insert lives
+// in app/actions/scores.ts.
 
 export type ScoreRow = {
     rank: number;
@@ -9,53 +15,10 @@ export type ScoreRow = {
     date: string; // "07/03/2026"
 };
 
-const PLAYERS = [
-    "PX_KAI",
-    "NEONFOX",
-    "Z3R0COOL",
-    "M00NRYU",
-    "VAULT_07",
-    "GLITCHA",
-    "ATARI_KID",
-    "CYBER_LU",
-    "MAGENTA88",
-    "SCANLINE",
-    "BIT_LORD",
-    "ARKADYA",
-    "DROID_X",
-    "RGB_QUEEN",
-    "PIXEL_DAD",
-    "RETROVIRA",
-    "VECTORX",
-    "JOY_STK",
-];
-
-export function seededScores(seed: number, count = 12): ScoreRow[] {
-    let s = seed;
-    const rand = () => (s = (s * 9301 + 49297) % 233280) / 233280;
-    const used = new Set<string>();
-    const rows: ScoreRow[] = [];
-    for (let i = 0; i < count; i++) {
-        let name: string;
-        do {
-            name = PLAYERS[Math.floor(rand() * PLAYERS.length)];
-        } while (used.has(name) && used.size < PLAYERS.length);
-        used.add(name);
-        const base = Math.floor(50000 + rand() * 250000);
-        const score = base - i * Math.floor(2000 + rand() * 4000);
-        const day = String(1 + Math.floor(rand() * 28)).padStart(2, "0");
-        const mon = String(1 + Math.floor(rand() * 12)).padStart(2, "0");
-        rows.push({
-            rank: i + 1,
-            name,
-            score: Math.max(score, 1000),
-            date: `${day}/${mon}/2026`,
-        });
-    }
-    return rows
-        .sort((a, b) => b.score - a.score)
-        .map((r, i) => ({ ...r, rank: i + 1 }));
-}
+// How many marks a board shows. The Hall of Fame table and the panel of the
+// detail screen kept these two numbers from the reference templates.
+export const BOARD_SIZE = 12;
+export const DETAIL_BOARD_SIZE = 10;
 
 // Replaces toLocaleString("es-ES"): a fixed "." thousands separator, so the
 // output never depends on the ICU data available to Node or to the browser.
@@ -70,3 +33,62 @@ export function formatScore(n: number): string {
             : digits;
     return negative ? `-${grouped}` : grouped;
 }
+
+// Hand-written for the same reason as formatScore: toLocaleDateString depends on
+// the ICU build. The UTC parts are read, not the local ones, so the day cannot
+// shift with the time zone of whatever machine renders the row.
+export function formatDate(iso: string | null): string {
+    if (!iso) return "";
+    const at = new Date(iso);
+    if (Number.isNaN(at.getTime())) return "";
+    const day = String(at.getUTCDate()).padStart(2, "0");
+    const month = String(at.getUTCMonth() + 1).padStart(2, "0");
+    return `${day}/${month}/${at.getUTCFullYear()}`;
+}
+
+// --- Saving a score -------------------------------------------------------
+
+export const PLAYER_MAX = 10;
+
+// Mirrors the CHECK constraint of public.scores.player.
+const PLAYER_PATTERN = /^[A-Z0-9_]{1,10}$/;
+
+export type ScoreInput = { player: string; score: number; maxScore: number };
+
+export type ScoreValidation =
+    | { ok: true; value: { player: string; score: number } }
+    | { ok: false; message: string };
+
+// The modal already uppercases and truncates what it sends, but none of that
+// reaches the server, so it runs again inside the action.
+export function validateScore(input: ScoreInput): ScoreValidation {
+    const player = input.player.trim().toUpperCase();
+
+    if (!PLAYER_PATTERN.test(player)) {
+        return {
+            ok: false,
+            message: "El nombre admite de 1 a 10 letras, números o guion bajo.",
+        };
+    }
+
+    if (!Number.isInteger(input.score) || input.score < 0) {
+        return { ok: false, message: "Esa puntuación no es válida." };
+    }
+
+    if (input.score > input.maxScore) {
+        return { ok: false, message: "Esa puntuación no es válida." };
+    }
+
+    return { ok: true, value: { player, score: input.score } };
+}
+
+// What the server action hands back to the modal:
+//   idle   → nothing sent yet; the name field and the button are shown
+//   saved  → the row is in the database; green terminal line
+//   failed → validation, rate limit or database failure; red terminal line
+export type ScoreState =
+    | { status: "idle" }
+    | { status: "saved" }
+    | { status: "failed"; message: string };
+
+export const SCORE_IDLE: ScoreState = { status: "idle" };

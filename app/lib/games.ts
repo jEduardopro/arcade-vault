@@ -1,5 +1,11 @@
-// Mock game catalogue, ported from references/templates/data.jsx.
-// No database or API: the eight games ship inside the bundle.
+// The shape of a cartridge (SPEC 06).
+//
+// Deliberately dependency-free — no Supabase client, no next/* imports — so a
+// client island can import the types and CATS without dragging the query layer
+// into the browser bundle. It is the same boundary SPEC 03 drew with
+// app/lib/contact.ts.
+//
+// The rows themselves are read in app/lib/catalogue.ts.
 
 export type Category = "ARCADE" | "PUZZLE" | "SHOOTER" | "VERSUS";
 
@@ -21,103 +27,9 @@ export type Game = {
     cat: Category;
     cover: CoverArt; // CSS class of the cover generator in globals.css
     color: "cyan" | "magenta" | "yellow" | "green"; // JUGAR button variant
-    best: number;
+    best: number; // MAX(score) of the game, 0 when nobody has played it
     plays: string; // already formatted: "12.4K"
 };
-
-export const GAMES: Game[] = [
-    {
-        id: "bloque-buster",
-        title: "BLOQUE BUSTER",
-        short: "Rebota la pelota y destruye muros de neón.",
-        long: "Pilota una nave-paleta y rebota un núcleo de plasma para pulverizar muros de bloques cromáticos. Cada nivel reorganiza la grilla en patrones imposibles. ¿Hasta dónde llegará tu racha?",
-        cat: "ARCADE",
-        cover: "cover-bricks",
-        color: "cyan",
-        best: 28450,
-        plays: "12.4K",
-    },
-    {
-        id: "caida",
-        title: "CAÍDA",
-        short: "Encaja las piezas antes de que el techo te aplaste.",
-        long: "Piezas geométricas descienden desde la oscuridad. Rótalas, encástralas y limpia líneas para sobrevivir. La velocidad aumenta sin piedad cada 10 líneas.",
-        cat: "PUZZLE",
-        cover: "cover-tetro",
-        color: "magenta",
-        best: 184220,
-        plays: "31.8K",
-    },
-    {
-        id: "serpentina",
-        title: "SERPENTINA",
-        short: "Crece sin morder tu propia cola.",
-        long: "Una serpiente de luz recorre la grilla buscando núcleos magenta. Cada bocado la alarga y la hace más veloz. Un movimiento en falso y se devora a sí misma.",
-        cat: "ARCADE",
-        cover: "cover-snake",
-        color: "green",
-        best: 7820,
-        plays: "9.1K",
-    },
-    {
-        id: "gloton",
-        title: "GLOTÓN",
-        short: "Devora puntos y escapa de los fantasmas.",
-        long: "Un círculo glotón patrulla un laberinto coleccionando puntos luminosos. Cuatro espectros lo persiguen, pero cada cierto tiempo aparece una píldora que invierte los papeles.",
-        cat: "ARCADE",
-        cover: "cover-glot",
-        color: "yellow",
-        best: 96400,
-        plays: "27.2K",
-    },
-    {
-        id: "invasores",
-        title: "INVASORES",
-        short: "Defiende el planeta de filas alienígenas.",
-        long: "Olas de pixeles hostiles descienden formación tras formación. Mueve tu cañón en horizontal y abre fuego con precisión, antes de que toquen la superficie.",
-        cat: "SHOOTER",
-        cover: "cover-invaders",
-        color: "green",
-        best: 54190,
-        plays: "18.0K",
-    },
-    {
-        id: "asteroides",
-        title: "ASTEROIDES",
-        short: "Pulveriza rocas a la deriva en gravedad cero.",
-        long: "Tu nave triangular flota en un vacío toroidal: sal por un borde y aparecerás por el opuesto. Dispara para partir las rocas grandes en medianas y las medianas en pequeñas, y recoge el módulo 3x para triplicar tu fuego durante cinco segundos.",
-        cat: "SHOOTER",
-        // The cover generator keeps its original name: the CSS class lives in
-        // globals.css as part of the literal port, and the card it belonged to
-        // is the one this entry replaces.
-        cover: "cover-rocas",
-        color: "yellow",
-        best: 41200,
-        plays: "15.6K",
-    },
-    {
-        id: "ranaria",
-        title: "RANARIA",
-        short: "Cruza la autopista de pixeles.",
-        long: "Salta entre carriles de coches a toda velocidad y troncos a la deriva en el río. Llega a los nenúfares antes de que se acabe el tiempo.",
-        cat: "ARCADE",
-        cover: "cover-rana",
-        color: "green",
-        best: 18900,
-        plays: "6.4K",
-    },
-    {
-        id: "duelo-pixel",
-        title: "DUELO PIXEL",
-        short: "Dos paletas. Una pelota. Reflejos máximos.",
-        long: "El duelo más puro: dos paletas verticales se enfrentan por rebotar una pelota luminosa. Modo solitario contra la CPU o partida local a dos jugadores.",
-        cat: "VERSUS",
-        cover: "cover-duelo",
-        color: "cyan",
-        best: 24,
-        plays: "4.2K",
-    },
-];
 
 export const CATS = [
     "TODOS",
@@ -126,7 +38,3 @@ export const CATS = [
     "SHOOTER",
     "VERSUS",
 ] as const satisfies readonly ["TODOS", ...Category[]];
-
-export function getGame(id: string): Game | undefined {
-    return GAMES.find((game) => game.id === id);
-}

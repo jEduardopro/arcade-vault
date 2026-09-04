@@ -6,7 +6,7 @@
 
 import { useMemo, useState } from "react";
 import { GameCard } from "@/app/components/game-card";
-import { CATS, GAMES } from "@/app/lib/games";
+import { CATS, type Game } from "@/app/lib/games";
 
 // The reference compared raw lowercase strings, which made the search
 // accent-sensitive: "cai" never matched "CAÍDA". Folding diacritics first keeps
@@ -17,18 +17,21 @@ const fold = (s: string) =>
         .replace(/\p{Diacritic}/gu, "")
         .toLowerCase();
 
-export function LibraryGrid() {
+// The catalogue arrives from the server already read: filtering eight rows in
+// memory needs no second round trip, and the component keeps owning nothing but
+// the search box and the chips.
+export function LibraryGrid({ games }: { games: Game[] }) {
     const [q, setQ] = useState("");
     const [cat, setCat] = useState<(typeof CATS)[number]>("TODOS");
 
     const filtered = useMemo(
         () =>
-            GAMES.filter(
+            games.filter(
                 (g) =>
                     (cat === "TODOS" || g.cat === cat) &&
                     fold(g.title).includes(fold(q)),
             ),
-        [q, cat],
+        [games, q, cat],
     );
 
     return (

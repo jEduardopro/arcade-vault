@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { LibraryGrid } from "@/app/components/library-grid";
+import { getGames } from "@/app/lib/catalogue";
 
 export const metadata: Metadata = {
     title: "Biblioteca",
@@ -9,8 +10,11 @@ export const metadata: Metadata = {
 // Library screen of references/templates/biblioteca.jsx. It used to live at "/",
 // which the landing now owns, so it sits at the index of the /games segment its
 // detail and player routes already use. The hero is static text, so it ships as
-// HTML; only the filters and the grid are a client island.
-export default function LibraryPage() {
+// HTML; the catalogue is read here, on the server, and only the filters and the
+// grid are a client island.
+export default async function LibraryPage() {
+    const games = await getGames();
+
     return (
         <main className="av-main">
             <div className="fade-in">
@@ -22,7 +26,7 @@ export default function LibraryPage() {
                     </div>
                 </section>
 
-                <LibraryGrid />
+                <LibraryGrid games={games} />
             </div>
         </main>
     );

@@ -5,21 +5,72 @@
 // splitting it would mean lifting that state into the URL.
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { GAMES, type Game } from "@/app/lib/games";
-import { formatScore, seededScores } from "@/app/lib/scores";
+import { useState } from "react";
+import type { Game } from "@/app/lib/games";
+import { formatScore, type ScoreRow } from "@/app/lib/scores";
 import { useSession } from "@/app/lib/session";
 
-export function HallBoard() {
+export function HallBoard({
+    games,
+    boards,
+}: {
+    games: Game[];
+    boards: Record<string, ScoreRow[]>;
+}) {
     const { user } = useSession();
     // The selected game is kept whole, so the title needs no second lookup.
-    const [tab, setTab] = useState<Game>(GAMES[0]);
+    // games[0] can be undefined now that the catalogue is a query, so the empty
+    // board below returns before anything reads the tab.
+    const [tab, setTab] = useState<Game | undefined>(games[0]);
 
-    // Same seed as the reference, so the figures match the original screen.
-    const rows = useMemo(() => seededScores(tab.id.length * 23 + 7, 12), [tab]);
+    // Every board arrived with the page, so changing tab is a lookup.
+    const rows = (tab && boards[tab.id]) || [];
 
-    const youRank = user ? Math.floor(8 + (tab.id.length % 4)) : null;
-    const youScore = user ? rows[5]?.score - 2400 : null;
+    // The reference invented this row with `8 + (id.length % 4)`. With real marks
+    // next to it that stops being a mock-up and becomes a lie, so now it is the
+    // player's own row or nothing at all.
+    const you = user
+        ? rows.find((row) => row.name === user.name.toUpperCase())
+        : undefined;
+
+    // An empty catalogue means the query failed or the seed never ran. It is a
+    // screen nobody could reach while the games were an array in the bundle.
+    if (!tab) {
+        return (
+            <div className="av-hall fade-in">
+                <div className="hall-head">
+                    <h1>SALÓN DE LA FAMA</h1>
+                    <p className="pixel" style={{ fontSize: 10 }}>
+                        LOS NOMBRES QUE NUNCA SE BORRAN DE LA PANTALLA
+                    </p>
+                </div>
+                <div
+                    style={{
+                        textAlign: "center",
+                        padding: 80,
+                        color: "var(--ink-faint)",
+                    }}
+                >
+                    <div
+                        className="pixel"
+                        style={{
+                            fontSize: 14,
+                            color: "var(--magenta)",
+                            marginBottom: 12,
+                        }}
+                    >
+                        SIN SEÑAL
+                    </div>
+                    <div>No pudimos leer el catálogo de cartuchos.</div>
+                </div>
+                <div style={{ textAlign: "center", marginTop: 32 }}>
+                    <Link className="btn lg" href="/games">
+                        VOLVER A LA BIBLIOTECA
+                    </Link>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="av-hall fade-in">
@@ -31,7 +82,7 @@ export function HallBoard() {
             </div>
 
             <div className="hall-tabs">
-                {GAMES.map((g) => (
+                {games.map((g) => (
                     <button
                         key={g.id}
                         className={"chip" + (tab.id === g.id ? " active" : "")}
@@ -42,43 +93,55 @@ export function HallBoard() {
                 ))}
             </div>
 
-            <div className="podium">
-                <div className="podium-slot silver">
-                    <div className="rank-num">02</div>
-                    <div className="name">{rows[1].name}</div>
-                    <div className="score">{formatScore(rows[1].score)}</div>
-                    <div className="date">{rows[1].date}</div>
-                </div>
-                <div className="podium-slot gold">
-                    <div
-                        className="pixel"
-                        style={{
-                            fontSize: 9,
-                            color: "var(--gold)",
-                            letterSpacing: "0.18em",
-                        }}
-                    >
-                        CAMPEÓN
+            {/* A board can now hold fewer than three marks, so every step of the
+                podium is drawn only when there is somebody standing on it. */}
+            {rows.length > 0 && (
+                <div className="podium">
+                    {rows[1] && (
+                        <div className="podium-slot silver">
+                            <div className="rank-num">02</div>
+                            <div className="name">{rows[1].name}</div>
+                            <div className="score">
+                                {formatScore(rows[1].score)}
+                            </div>
+                            <div className="date">{rows[1].date}</div>
+                        </div>
+                    )}
+                    <div className="podium-slot gold">
+                        <div
+                            className="pixel"
+                            style={{
+                                fontSize: 9,
+                                color: "var(--gold)",
+                                letterSpacing: "0.18em",
+                            }}
+                        >
+                            CAMPEÓN
+                        </div>
+                        <div
+                            className="rank-num"
+                            style={{ fontSize: 36, marginTop: 4 }}
+                        >
+                            01
+                        </div>
+                        <div className="name">{rows[0].name}</div>
+                        <div className="score" style={{ fontSize: 20 }}>
+                            {formatScore(rows[0].score)}
+                        </div>
+                        <div className="date">{rows[0].date}</div>
                     </div>
-                    <div
-                        className="rank-num"
-                        style={{ fontSize: 36, marginTop: 4 }}
-                    >
-                        01
-                    </div>
-                    <div className="name">{rows[0].name}</div>
-                    <div className="score" style={{ fontSize: 20 }}>
-                        {formatScore(rows[0].score)}
-                    </div>
-                    <div className="date">{rows[0].date}</div>
+                    {rows[2] && (
+                        <div className="podium-slot bronze">
+                            <div className="rank-num">03</div>
+                            <div className="name">{rows[2].name}</div>
+                            <div className="score">
+                                {formatScore(rows[2].score)}
+                            </div>
+                            <div className="date">{rows[2].date}</div>
+                        </div>
+                    )}
                 </div>
-                <div className="podium-slot bronze">
-                    <div className="rank-num">03</div>
-                    <div className="name">{rows[2].name}</div>
-                    <div className="score">{formatScore(rows[2].score)}</div>
-                    <div className="date">{rows[2].date}</div>
-                </div>
-            </div>
+            )}
 
             <div className="hall-table">
                 <div className="th">
@@ -110,7 +173,19 @@ export function HallBoard() {
                         <div className="dt">{r.date}</div>
                     </div>
                 ))}
-                {user && (
+                {rows.length === 0 && (
+                    <div
+                        style={{
+                            padding: 48,
+                            textAlign: "center",
+                            color: "var(--ink-faint)",
+                        }}
+                    >
+                        Todavía no hay marcas en {tab.title}. La primera puede
+                        ser la tuya.
+                    </div>
+                )}
+                {you && (
                     <>
                         <div className="tr you-label">
                             ▸ TU MEJOR MARCA EN {tab.title}
@@ -125,13 +200,13 @@ export function HallBoard() {
                                 className="rk"
                                 style={{ color: "var(--yellow)" }}
                             >
-                                #{String(youRank).padStart(2, "0")}
+                                #{String(you.rank).padStart(2, "0")}
                             </div>
                             <div
                                 className="pl"
                                 style={{ color: "var(--yellow)" }}
                             >
-                                {user.name}
+                                {you.name}
                             </div>
                             <div
                                 className="sc"
@@ -140,9 +215,9 @@ export function HallBoard() {
                                     textShadow: "0 0 6px rgba(245,255,0,0.5)",
                                 }}
                             >
-                                {formatScore(youScore || 9999)}
+                                {formatScore(you.score)}
                             </div>
-                            <div className="dt">11/05/2026</div>
+                            <div className="dt">{you.date}</div>
                         </div>
                     </>
                 )}

@@ -8,6 +8,18 @@ export function Leaderboard({ rows }: { rows: ScoreRow[] }) {
     return (
         <div className="leaderboard">
             <h3>MEJORES PUNTUACIONES</h3>
+            {rows.length === 0 && (
+                <div
+                    style={{
+                        padding: "24px 8px",
+                        textAlign: "center",
+                        color: "var(--ink-faint)",
+                        fontSize: 12,
+                    }}
+                >
+                    Nadie ha marcado todavía. Sé el primero.
+                </div>
+            )}
             {rows.map((r, i) => (
                 <div
                     key={r.name}

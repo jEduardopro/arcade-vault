@@ -3,23 +3,25 @@ import { HomeFeatureIcon } from "@/app/components/home-feature-icon";
 import { HomeMiniCard } from "@/app/components/home-mini-card";
 import { HomeSilhouettes } from "@/app/components/home-silhouettes";
 import { Reveal } from "@/app/components/reveal";
-import { GAMES } from "@/app/lib/games";
+import { getGames } from "@/app/lib/catalogue";
 import {
     HOME_FAQ,
     HOME_FEATURES,
-    HOME_STATS,
     HOME_TICKER,
     HOME_TOP,
+    homeStats,
     PLAN_PERKS,
     PREVIEW_COUNT,
 } from "@/app/lib/home";
 import { formatScore } from "@/app/lib/scores";
 
 // Landing of references/templates/home-about/home.jsx. The library it used to
-// hold now lives at /games. Everything here is static copy, so the page stays a
+// hold now lives at /games. Everything here is static copy except the preview
+// rail and the game count, which come from the catalogue, so the page stays a
 // Server Component: the reference's onClick/navigate calls become <Link>s, and
 // only the scroll-in sections below the hero are client islands.
-export default function HomePage() {
+export default async function HomePage() {
+    const games = await getGames();
     return (
         <main className="av-main">
             <div className="home fade-in">
@@ -120,7 +122,7 @@ export default function HomePage() {
                         <div className="section-rule"></div>
                     </div>
                     <div className="mini-rail">
-                        {GAMES.slice(0, PREVIEW_COUNT).map((game) => (
+                        {games.slice(0, PREVIEW_COUNT).map((game) => (
                             <HomeMiniCard key={game.id} game={game} />
                         ))}
                     </div>
@@ -134,7 +136,7 @@ export default function HomePage() {
                 {/* STATS */}
                 <Reveal className="home-stats">
                     <div className="stats-inner">
-                        {HOME_STATS.map((stat, i) => (
+                        {homeStats(games.length).map((stat, i) => (
                             <div
                                 key={stat.unit}
                                 className="stat-block"
