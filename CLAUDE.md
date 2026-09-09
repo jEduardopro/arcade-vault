@@ -13,11 +13,20 @@ play**: ASTEROIDES (SPEC 05), CAÍDA (SPEC 07), BLOQUE BUSTER (SPEC 08) and SNAK
 The other four still show the mock player from SPEC 01. The catalogue and every score live
 in Supabase (SPEC 06); the signed-in user is still fake and lives in `localStorage`.
 
-The README specifies a **spec-driven workflow**: features are designed with `/spec` and then
-built with `/spec-impl`, following the conventions of
-[Klerith/fernando-skills](https://github.com/Klerith/fernando-skills). Those skills are not
-vendored in the repo; install them with `npx skills@latest add Klerith/fernando-skills`.
-Prefer writing/updating a spec before implementing a feature.
+`references/implemented-games.md` is the per-cartridge reference: for each playable game
+its catalogue row, its controls, and the tuning numbers of its `constants.ts` with the
+reason behind each one, plus the four ids that are still only a row. Read it before
+touching a game; it is a snapshot, so check its date against `public.games` rather than
+trusting it over the database. It is not `@`-imported on purpose — a game is not what
+every session is about, and the cost of the pointer is a read when it is needed.
+
+The README specifies a **spec-driven workflow**: a feature is designed as
+`specs/NN-slug.md` with `/spec` — or with `/add-game` when it is a new cartridge — and only
+then built with `/spec-impl`, following the conventions of
+[Klerith/fernando-skills](https://github.com/Klerith/fernando-skills). Nine specs are
+written and implemented, and `specs/` is the record of why the code looks the way it does:
+when a convention below cites a SPEC number, that file is the long version. Prefer
+writing or updating a spec before implementing a feature.
 
 ## Commands
 
@@ -67,14 +76,48 @@ are prefixed on purpose — the browser client needs them in the bundle. The sec
 (`sb_secret_…`) belongs to neither file: it bypasses RLS and no spec needs it yet.
 `.gitignore` ignores `.env*` but keeps `.env.example`, which must never hold real values.
 
+## MCP servers
+
+`.mcp.json` declares one project-scoped server, `supabase`: the hosted HTTP endpoint
+`https://mcp.supabase.com/mcp`, pinned to this project's `project_ref` and to the `docs`,
+`account`, `database`, `debugging`, `development`, `functions` and `branching` feature
+groups. It is where `apply_migration`, `list_migrations`, `execute_sql`,
+`generate_typescript_types` and `get_advisors` come from, so the two Supabase conventions
+below assume it is connected. A project server is opt-in per machine — approve it at the
+prompt, or list it under `enabledMcpjsonServers` in `.claude/settings.local.json`, which is
+gitignored and personal. `playwright` is used to drive the built screens but is not
+declared here: it comes from the machine's own configuration, and the allow-list in that
+same local settings file is its only trace in the repo.
+
 ## Skills
 
-Usa siempre /frontend-design para diseñar la interfaz de usuario.
+**Always use `/frontend-design` when designing user interface.**
 
-Para añadir un juego nuevo al Vault, diseña el spec con `/add-game` antes de escribir
-código; implementa después con `/spec-impl`. `/add-game` solo escribe el spec: lleva dentro
-el contrato del motor de SPEC 05 y las restricciones del catálogo de SPEC 06, así que un
-juego nuevo no tiene que redescubrirlos.
+The workflow skills are **vendored**, not installed per machine: each one is
+`.agents/skills/<name>/SKILL.md`, and `.claude/skills/<name>` is a relative symlink into
+that folder, so a fresh clone has them with no setup step.
+
+| Skill              | Where it comes from             | What it does                                                                                           |
+| ------------------ | ------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `/spec`            | vendored, upstream              | Designs a spec section by section, asking first, and writes `specs/NN-slug.md`.                        |
+| `/spec-impl`       | vendored, upstream              | Implements an approved spec: checks the state reads "Approved", branches, then builds it step by step. |
+| `/add-game`        | vendored, written for this repo | Designs the spec for a new playable cartridge — the spec and nothing else.                             |
+| `/frontend-design` | personal, `~/.claude/skills`    | Visual design guidance. Not part of the repo; a clone does not get it.                                 |
+
+`skills-lock.json` records the source and hash of the two upstream skills;
+`npx skills@latest add Klerith/fernando-skills` re-syncs them and rewrites the lock.
+`/add-game` has no entry there on purpose — it is local, and editing it is editing this
+repository. All three set `disable-model-invocation: true`, so they run when the slash
+command is typed and never on their own.
+
+`specs/.spec-config.yml` configures the workflow: `AutoCreateBranch: true` is why
+`/spec-impl` creates and switches to `spec-NN-slug` without asking, and why the history
+reads `spec-09-juego-snake`.
+
+To add a new game to the Vault, design the spec with `/add-game` before writing any code,
+then implement with `/spec-impl`. `/add-game` only writes the spec, but it carries the
+SPEC 05 engine contract and the SPEC 06 catalogue constraints inside it, so a new game
+never has to rediscover them.
 
 ## Stack and conventions
 
@@ -127,6 +170,13 @@ juego nuevo no tiene que redescubrirlos.
   `generate_typescript_types` on every schema change. There is no session-refreshing
   `proxy.ts` yet; it arrives with the auth spec, and in Next 16 that file is `proxy.ts`,
   not the deprecated `middleware.ts`.
+- **The signed-in user is still a fiction (SPEC 01).** `app/lib/session.tsx` is the whole of
+  it: a `"use client"` module store over `localStorage["av_user"]`, read through
+  `useSyncExternalStore` so the server snapshot is always `null` and the first client render
+  matches the server's. `/login` and `app/components/auth-form.tsx` write it, `nav.tsx` reads
+  it, and nothing verifies it. Scores used to live beside it under `"av_scores"` and have
+  been Supabase rows since SPEC 06; that key is inert history, not a fallback. Real
+  authentication is its own spec, and it is what will bring `proxy.ts`.
 - **The schema is SQL in `supabase/migrations/` (SPEC 06).** One file per change, named
   `<timestamp>_<snake_case_description>.sql`, applied with the MCP server's
   `apply_migration` under that same description. The server assigns the timestamp, so
@@ -157,7 +207,8 @@ juego nuevo no tiene que redescubrirlos.
   read live, and `takeScoreSlot()` from `app/lib/rate-limit.ts`, five saves per IP every
   five minutes. Same split as the contact form of SPEC 03: pure validation in `app/lib/`,
   and only the action talks to the outside. Every message it returns is a fixed literal.
-- **Games live in `app/lib/engines/<game>/` (SPEC 05).** `references/started-games/` held
+- **Games live in `app/lib/engines/<game>/` (SPEC 05)**, and what each one is tuned to is
+  in `references/implemented-games.md`. `references/started-games/` held
   three vanilla-canvas games and all three are ported: `asteroides/` (SPEC 05), `caida/`
   (SPEC 07) and `bloque-buster/` (SPEC 08). `snake/` (SPEC 09) is the fourth engine and the
   first with **no original at all** — that folder holds only a sprite atlas — so every number
