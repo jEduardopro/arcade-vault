@@ -18,7 +18,11 @@ its catalogue row, its controls, and the tuning numbers of its `constants.ts` wi
 reason behind each one, plus the four ids that are still only a row. Read it before
 touching a game; it is a snapshot, so check its date against `public.games` rather than
 trusting it over the database. It is not `@`-imported on purpose — a game is not what
-every session is about, and the cost of the pointer is a read when it is needed.
+every session is about, and the cost of the pointer is a read when it is needed. Its
+companion is `references/game-suggestions-todo.md`, which records what has been
+_considered_ rather than what has been built: every game idea with its state (`propuesto`,
+`rechazado`, `implementado`) and the reason behind it. The `game-planner` agent maintains
+it; it is not `@`-imported either.
 
 The README specifies a **spec-driven workflow**: a feature is designed as
 `specs/NN-slug.md` with `/spec` — or with `/add-game` when it is a new cartridge — and only
@@ -118,6 +122,19 @@ To add a new game to the Vault, design the spec with `/add-game` before writing 
 then implement with `/spec-impl`. `/add-game` only writes the spec, but it carries the
 SPEC 05 engine contract and the SPEC 06 catalogue constraints inside it, so a new game
 never has to rediscover them.
+
+## Agents
+
+`.claude/agents/game-planner.md` is the one subagent in the repo. It answers the question
+that comes _before_ `/add-game` — **which** cartridge is next — and nothing else: it reads
+the live catalogue, scores candidates on category diversity, 2D-canvas feasibility and
+classic recognition, records the verdict in `references/game-suggestions-todo.md`, and
+stops at printing `/add-game <name>`. It never writes a spec, a migration or game code, and
+Supabase is `select`-only for it.
+
+Agents are **not** vendored the way the skills are: there is no `npx skills` equivalent and
+no upstream to track, so the file lives directly under `.claude/agents/` and is committed —
+a fresh clone gets it with no symlink to explain.
 
 ## Stack and conventions
 
