@@ -125,16 +125,28 @@ never has to rediscover them.
 
 ## Agents
 
-`.claude/agents/game-planner.md` is the one subagent in the repo. It answers the question
-that comes _before_ `/add-game` — **which** cartridge is next — and nothing else: it reads
-the live catalogue, scores candidates on category diversity, 2D-canvas feasibility and
-classic recognition, records the verdict in `references/game-suggestions-todo.md`, and
-stops at printing `/add-game <name>`. It never writes a spec, a migration or game code, and
-Supabase is `select`-only for it.
+Two subagents live in the repo, and both sit _before_ `/add-game` in the pipeline. Neither
+one writes a migration, game code or a `CLAUDE.md` edit.
+
+`.claude/agents/game-planner.md` answers **which** cartridge is next, and nothing else: it
+reads the live catalogue, scores candidates on category diversity, 2D-canvas feasibility and
+classic recognition, records the verdict in `references/game-suggestions-todo.md`, and stops
+at printing `/add-game <name>`. It never writes a spec, and Supabase is `select`-only for it.
+
+`.claude/agents/game-jam.md` answers **what a theme becomes**. Given a theme — «bajo el mar»,
+«terror» — it derives one recognisable classic from it, designs two takes that diverge on at
+least two axes (mechanic, run ending, scoring, controls, HUD), and writes a **complete spec
+for each** under `specs/game-jam/<game-id>/`, both sharing the next free `NN` because only one
+is ever promoted. It is the autonomous counterpart of `/add-game`: it never asks, so every
+decision that skill would have put to the user is taken and justified in section 6 of the
+spec. It has no Supabase tool at all — the catalogue constraints come from
+`supabase/migrations/` and `app/lib/games.ts` — it never writes into the numbered `specs/`
+sequence, and it never touches `game-planner`'s To-Do. Promoting a draft is manual: move the
+chosen file to `specs/NN-slug.md`, mark it `Approved`, then `/spec-impl NN-slug`.
 
 Agents are **not** vendored the way the skills are: there is no `npx skills` equivalent and
-no upstream to track, so the file lives directly under `.claude/agents/` and is committed —
-a fresh clone gets it with no symlink to explain.
+no upstream to track, so the files live directly under `.claude/agents/` and are committed —
+a fresh clone gets them with no symlink to explain.
 
 ## Stack and conventions
 
