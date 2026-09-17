@@ -125,8 +125,9 @@ never has to rediscover them.
 
 ## Agents
 
-Two subagents live in the repo, and both sit _before_ `/add-game` in the pipeline. Neither
-one writes a migration, game code or a `CLAUDE.md` edit.
+Three subagents live in the repo. The first two sit _before_ `/add-game` in the pipeline and
+the third comes after all of it, on a cartridge that already plays. None of them writes a
+migration, a branch or a `CLAUDE.md` edit, and only the third writes any code at all.
 
 `.claude/agents/game-planner.md` answers **which** cartridge is next, and nothing else: it
 reads the live catalogue, scores candidates on category diversity, 2D-canvas feasibility and
@@ -143,6 +144,17 @@ spec. It has no Supabase tool at all — the catalogue constraints come from
 `supabase/migrations/` and `app/lib/games.ts` — it never writes into the numbered `specs/`
 sequence, and it never touches `game-planner`'s To-Do. Promoting a draft is manual: move the
 chosen file to `specs/NN-slug.md`, mark it `Approved`, then `/spec-impl NN-slug`.
+
+`.claude/agents/skin-designer.md` answers **what a cartridge looks like**. It owns the three
+skins every playable game must offer — `clasico` (the default, a byte-for-byte copy of today's
+`PALETTE`, so nothing changes on screen until somebody picks another), `neon` and `retro` —
+audits which cartridges already have them, measures each colour against a WCAG contrast bar
+because the Vault is dark-only, and writes `app/lib/engines/<game>/skins.ts` plus its own
+record in `references/game-skins.md`. It is the only agent that writes code, and the boundary
+is sharp: palettes yes, `engine.ts`, `entities.ts`, any `.tsx` and `app/globals.css` never. The
+seam that feeds a palette to a frame does not exist yet, so on its first run it leaves a
+`Draft` spec for it and stops; that spec is what will finally use the `.gp-themer` swatches the
+port has been carrying since SPEC 01. It has no Supabase tool: a skin is not catalogue data.
 
 Agents are **not** vendored the way the skills are: there is no `npx skills` equivalent and
 no upstream to track, so the files live directly under `.claude/agents/` and are committed —
