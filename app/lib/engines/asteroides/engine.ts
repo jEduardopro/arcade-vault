@@ -14,7 +14,6 @@
 
 import {
     MAX_DT,
-    PALETTE,
     PARTICLE,
     POINTS,
     POWERUP,
@@ -32,6 +31,8 @@ import {
     rand,
     type Input,
 } from "@/app/lib/engines/asteroides/entities";
+import { SKINS, type Palette } from "@/app/lib/engines/asteroides/skins";
+import { DEFAULT_SKIN, type SkinId } from "@/app/lib/skins";
 
 /**
  * What the player sees the game doing.
@@ -62,6 +63,12 @@ export type EngineHandle = {
     end(): void;
     /** Back to "ready", with a fresh field drawn behind the start overlay. */
     restart(): void;
+    /**
+     * Repaints in another skin without touching the run: no reset, no lost
+     * score, no pause. The mounting component calls it instead of rebuilding
+     * the engine, which would cost the game in progress.
+     */
+    setSkin(next: SkinId): void;
     /** Cancels the loop and removes every listener. Always call it. */
     destroy(): void;
 };
@@ -89,6 +96,7 @@ const MAX_DPR = 2;
 export function createAsteroidsEngine(
     canvas: HTMLCanvasElement,
     on: EngineCallbacks,
+    skin: SkinId = DEFAULT_SKIN,
 ): EngineHandle {
     const context = canvas.getContext("2d");
     if (!context) throw new Error("2D canvas context unavailable");
@@ -97,6 +105,11 @@ export function createAsteroidsEngine(
     const ctx = context;
 
     // ── State ────────────────────────────────────────────────────────────────
+
+    // The only piece of the skin the loop knows about: a colour table handed
+    // down to every draw(), swapped whole by setSkin(). Nothing else in the
+    // engine is aware that skins exist.
+    let palette: Palette = SKINS[skin];
 
     let ship = new Ship();
     let bullets: Bullet[] = [];
@@ -315,14 +328,14 @@ export function createAsteroidsEngine(
     // ── Draw ─────────────────────────────────────────────────────────────────
 
     function draw() {
-        ctx.fillStyle = PALETTE.bg;
+        ctx.fillStyle = palette.bg;
         ctx.fillRect(0, 0, WORLD.w, WORLD.h);
 
-        particles.forEach((p) => p.draw(ctx));
-        asteroids.forEach((a) => a.draw(ctx));
-        powerUps.forEach((p) => p.draw(ctx));
-        bullets.forEach((b) => b.draw(ctx));
-        ship.draw(ctx);
+        particles.forEach((p) => p.draw(ctx, palette));
+        asteroids.forEach((a) => a.draw(ctx, palette));
+        powerUps.forEach((p) => p.draw(ctx, palette));
+        bullets.forEach((b) => b.draw(ctx, palette));
+        ship.draw(ctx, palette);
     }
 
     // ── Loop ─────────────────────────────────────────────────────────────────
@@ -442,6 +455,14 @@ export function createAsteroidsEngine(
             lastSnapshot = null;
             emitSnapshot();
             draw();
+        },
+
+        setSkin(next: SkinId) {
+            palette = SKINS[next];
+            // While the loop runs the next frame repaints on its own. With it
+            // stopped — ready, paused, over — the frame on screen is frozen,
+            // so the new colours need an explicit repaint to show up.
+            if (rafId === null) draw();
         },
 
         destroy() {

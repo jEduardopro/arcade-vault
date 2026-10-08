@@ -1,17 +1,20 @@
 // The five entities of references/started-games/02-asteroids/game.js, ported to
-// TypeScript. Two mechanical changes and no behavioural ones:
+// TypeScript. Three mechanical changes and no behavioural ones:
 //
-//   - draw(ctx) receives the canvas context instead of reading a module global.
+//   - draw(ctx, palette) receives the canvas context instead of reading a
+//     module global, and since SPEC 10 the palette too: an entity does not look
+//     its colours up, they are handed to it, exactly as ctx already was.
 //   - Ship.update(dt, input) receives the keyboard state instead of reading a
 //     module-level `keys` object.
 //
 // Everything else — the silhouettes, the vertex counts, the blink cadence — is
-// copied vertex by vertex. Only the colours change, and they come from PALETTE.
+// copied vertex by vertex. Only the colours change, and they come from the
+// palette of whichever skin the player picked; `clasico` is a byte-for-byte
+// copy of PALETTE, so the default still paints what the original did.
 
 import {
     ASTEROID,
     BULLET,
-    PALETTE,
     PARTICLE,
     POWERUP,
     RADII,
@@ -19,6 +22,7 @@ import {
     SPEEDS,
     WORLD,
 } from "@/app/lib/engines/asteroides/constants";
+import type { Palette } from "@/app/lib/engines/asteroides/skins";
 
 // ── Utils ────────────────────────────────────────────────────────────────────
 
@@ -34,6 +38,17 @@ export const dist = (
     a: { x: number; y: number },
     b: { x: number; y: number },
 ) => Math.hypot(a.x - b.x, a.y - b.y);
+
+/**
+ * The bloom of a skin. Assigns both fields every time so a previous drawable's
+ * halo can never leak into this one: a radius of 0 — every value of `clasico` —
+ * disables the shadow whatever the colour is. Every caller sets it inside its
+ * own save()/restore() pair, so the frame clear never inherits a shadow.
+ */
+function setGlow(ctx: CanvasRenderingContext2D, radius: number, color: string) {
+    ctx.shadowBlur = radius;
+    ctx.shadowColor = color;
+}
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -68,11 +83,14 @@ export class Bullet {
         if (this.ttl <= 0) this.dead = true;
     }
 
-    draw(ctx: CanvasRenderingContext2D) {
-        ctx.fillStyle = PALETTE.bullet;
+    draw(ctx: CanvasRenderingContext2D, palette: Palette) {
+        ctx.save();
+        setGlow(ctx, palette.glow.bullet, palette.bullet);
+        ctx.fillStyle = palette.bullet;
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
         ctx.fill();
+        ctx.restore();
     }
 }
 
@@ -131,11 +149,12 @@ export class Asteroid {
         ];
     }
 
-    draw(ctx: CanvasRenderingContext2D) {
+    draw(ctx: CanvasRenderingContext2D, palette: Palette) {
         ctx.save();
         ctx.translate(this.x, this.y);
         ctx.rotate(this.rot);
-        ctx.strokeStyle = PALETTE.asteroid;
+        setGlow(ctx, palette.glow.asteroid, palette.asteroid);
+        ctx.strokeStyle = palette.asteroid;
         ctx.lineWidth = 1.5;
         ctx.lineJoin = "round";
         ctx.beginPath();
@@ -176,7 +195,7 @@ export class PowerUp {
         if (this.ttl <= 0) this.dead = true;
     }
 
-    draw(ctx: CanvasRenderingContext2D) {
+    draw(ctx: CanvasRenderingContext2D, palette: Palette) {
         // About to expire: blink instead of vanishing without warning.
         if (
             this.ttl < POWERUP.blinkBelow &&
@@ -186,20 +205,27 @@ export class PowerUp {
         }
 
         const pulse = 0.85 + Math.sin(performance.now() / 150) * 0.15;
+        // The "3x" caption is drawn in world space, outside the rotation, so
+        // this save() wraps the whole method instead of just the square: the
+        // glow has to cover both and neither may leak out.
+        ctx.save();
+        setGlow(ctx, palette.glow.powerUp, palette.powerUp);
+
         ctx.save();
         ctx.translate(this.x, this.y);
         ctx.rotate(Math.PI / 4);
-        ctx.strokeStyle = PALETTE.powerUp;
+        ctx.strokeStyle = palette.powerUp;
         ctx.lineWidth = 2;
         const r = this.radius * pulse;
         ctx.strokeRect(-r, -r, r * 2, r * 2);
         ctx.restore();
 
-        ctx.fillStyle = PALETTE.powerUp;
+        ctx.fillStyle = palette.powerUp;
         ctx.font = "bold 12px monospace";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText("3x", this.x, this.y);
+        ctx.restore();
     }
 }
 
@@ -276,7 +302,7 @@ export class Ship {
         return [new Bullet(ox, oy, this.angle)];
     }
 
-    draw(ctx: CanvasRenderingContext2D) {
+    draw(ctx: CanvasRenderingContext2D, palette: Palette) {
         if (this.dead) return;
         // Blink while the respawn invincibility lasts.
         if (this.invincible > 0 && Math.floor(this.invincible * 8) % 2 === 0) {
@@ -286,7 +312,8 @@ export class Ship {
         ctx.save();
         ctx.translate(this.x, this.y);
         ctx.rotate(this.angle);
-        ctx.strokeStyle = PALETTE.ship;
+        setGlow(ctx, palette.glow.ship, palette.ship);
+        ctx.strokeStyle = palette.ship;
         ctx.lineWidth = 1.5;
         ctx.lineJoin = "round";
 
@@ -302,11 +329,14 @@ export class Ship {
         // Thruster flame, skipped on some frames so it flickers.
         const { x, y, minLength, maxLength, skipChance } = SHIP.flame;
         if (this.thrusting && Math.random() > skipChance) {
+            // Its own glow, reassigned over the hull's: the exhaust burns at a
+            // different radius than the hull in every skin.
+            setGlow(ctx, palette.glow.flame, palette.flame);
             ctx.beginPath();
             ctx.moveTo(x, -y);
             ctx.lineTo(x - rand(minLength, maxLength), 0);
             ctx.lineTo(x, y);
-            ctx.strokeStyle = PALETTE.flame;
+            ctx.strokeStyle = palette.flame;
             ctx.stroke();
         }
 
@@ -344,13 +374,17 @@ export class Particle {
         if (this.ttl <= 0) this.dead = true;
     }
 
-    draw(ctx: CanvasRenderingContext2D) {
+    draw(ctx: CanvasRenderingContext2D, palette: Palette) {
         const alpha = this.ttl / this.life;
-        ctx.strokeStyle = `rgba(${PALETTE.particle}, ${alpha.toFixed(2)})`;
+        const color = `rgba(${palette.particle}, ${alpha.toFixed(2)})`;
+        ctx.save();
+        setGlow(ctx, palette.glow.particle, color);
+        ctx.strokeStyle = color;
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(this.x, this.y);
         ctx.lineTo(this.x - this.vx * 0.05, this.y - this.vy * 0.05);
         ctx.stroke();
+        ctx.restore();
     }
 }

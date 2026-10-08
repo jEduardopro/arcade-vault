@@ -21,14 +21,22 @@ Last checked: 2026-09-09.
 | 3 | **BLOQUE BUSTER** | `bloque-buster` | ARCADE   | SPEC 08 | `app/lib/engines/bloque-buster/`  | `references/started-games/04-arkanoid/`    |
 | 4 | **SNAKE**         | `snake`         | ARCADE   | SPEC 09 | `app/lib/engines/snake/`          | none — only `snake-assets/fruits.png`      |
 
-| Cartridge         | Lives | Levels                | HUD extra stat        | `max_score` | Audio | Binary asset |
-| ----------------- | ----- | --------------------- | --------------------- | ----------- | ----- | ------------ |
-| **ASTEROIDES**    | 3     | endless               | `3x` while active     | 10 000 000  | no    | —            |
-| **CAÍDA**         | — (0) | endless, 10 lines ea. | `LÍNEAS`              | 1 000 000   | no    | —            |
-| **BLOQUE BUSTER** | 3     | endless, 5 patterns   | `BLOQUES`             | 100 000     | **yes** | 2 × `.mp3` |
-| **SNAKE**         | — (0) | 1–10, 5 fruits each   | `LARGO`               | 50 000      | no    | 1 × `.png`   |
+| Cartridge         | Lives | Levels                | HUD extra stat        | `max_score` | Audio | Binary asset | Skins |
+| ----------------- | ----- | --------------------- | --------------------- | ----------- | ----- | ------------ | ----- |
+| **ASTEROIDES**    | 3     | endless               | `3x` while active     | 10 000 000  | no    | —            | **3** |
+| **CAÍDA**         | — (0) | endless, 10 lines ea. | `LÍNEAS`              | 1 000 000   | no    | —            | —     |
+| **BLOQUE BUSTER** | 3     | endless, 5 patterns   | `BLOQUES`             | 100 000     | **yes** | 2 × `.mp3` | —     |
+| **SNAKE**         | — (0) | 1–10, 5 fruits each   | `LARGO`               | 50 000      | no    | 1 × `.png`   | —     |
 
 A cartridge with no lives passes `lives: 0` and `PlayerShell` renders `—`.
+
+**Skins** (SPEC 10, 2026-09-17): only ASTEROIDES offers the three — `clasico`, `neon`
+and `retro` — and only it shows the `.gp-themer` selector under the CRT frame, because
+`PlayerShell` renders it just for a cartridge that passes `skin` and `onSkinChange`. The
+other three have no `app/lib/engines/<game>/skins.ts` yet; the palettes are written by
+the `skin-designer` agent and recorded, with their contrast measurements, in
+`references/game-skins.md`. `clasico` is a byte-for-byte copy of each engine's `PALETTE`,
+so nothing below changes on screen until a player picks another one.
 
 ---
 

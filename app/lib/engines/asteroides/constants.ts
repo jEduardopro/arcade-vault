@@ -78,6 +78,11 @@ export const RUN = {
 // Mirror of the :root tokens in app/globals.css. The theme is dark-only and has
 // had no light variant since SPEC 01, so these literals cannot drift on their
 // own; the token each one copies is named beside it.
+//
+// Since SPEC 10 nothing paints from here: the loop draws with the palette of
+// the chosen skin, and `clasico` in skins.ts is this table copied value for
+// value. It is kept as the reference that copy is checked against — a value in
+// `clasico` that differs from one below is a bug, not a decision.
 export const PALETTE = {
     bg: "#0a0a0f", // --bg
     ship: "#00f5ff", // --cyan

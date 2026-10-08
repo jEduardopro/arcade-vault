@@ -15,6 +15,21 @@ import { submitScore } from "@/app/actions/scores";
 import type { Game } from "@/app/lib/games";
 import { formatScore, PLAYER_MAX, SCORE_IDLE } from "@/app/lib/scores";
 import { useSession } from "@/app/lib/session";
+import { SKIN_IDS, SKIN_LABELS, type SkinId } from "@/app/lib/skins";
+
+/**
+ * Skin id to the modifier class of the port. The three names in
+ * app/globals.css are `neon`, `vapor` and `cabinet` because they came from the
+ * reference template, not from this feature, and CLAUDE.md forbids renaming
+ * them there — the port is literal. So the mapping lives here instead: cyan
+ * for the Vault's own accent, magenta for the pushed look, yellow for the
+ * closest thing the sheet has to amber phosphor.
+ */
+const SWATCH_CLASS: Record<SkinId, string> = {
+    clasico: "neon",
+    neon: "vapor",
+    retro: "cabinet",
+};
 
 export type PlayerShellProps = {
     game: Game;
@@ -29,6 +44,13 @@ export type PlayerShellProps = {
     onEnd: () => void;
     /** Starts a new run. The shell clears its own saved-score state first. */
     onRestart: () => void;
+    /**
+     * The skin selector, rendered only when a cartridge passes both halves. A
+     * game whose engine has no palettes yet leaves them out and gets no
+     * control, instead of a row of swatches that would paint nothing.
+     */
+    skin?: SkinId;
+    onSkinChange?: (skin: SkinId) => void;
     /** Whatever fills .crt-screen: a canvas, or the fake arena. */
     children: React.ReactNode;
 };
@@ -44,6 +66,8 @@ export function PlayerShell({
     onTogglePause,
     onEnd,
     onRestart,
+    skin,
+    onSkinChange,
     children,
 }: PlayerShellProps) {
     const { user } = useSession();
@@ -143,6 +167,10 @@ export function PlayerShell({
                 </div>
             </div>
 
+            {skin && onSkinChange && (
+                <SkinPicker skin={skin} onSkinChange={onSkinChange} />
+            )}
+
             {over && (
                 <div className="modal-bd">
                     <div className="modal">
@@ -167,6 +195,43 @@ export function PlayerShell({
                     </div>
                 </div>
             )}
+        </div>
+    );
+}
+
+/**
+ * The skin selector, under the CRT frame. It is chrome of the screen like the
+ * HUD: a game never learns that it exists, it only receives the id it was
+ * already handed and repaints.
+ *
+ * Every class here is already in app/globals.css — `.gp-themer` and its three
+ * `.swatch` modifiers have been carried by the port since SPEC 01 with no
+ * markup applying them. This is that markup; not one rule is added.
+ */
+function SkinPicker({
+    skin,
+    onSkinChange,
+}: {
+    skin: SkinId;
+    onSkinChange: (skin: SkinId) => void;
+}) {
+    return (
+        <div className="gp-themer" role="group" aria-label="Skin del cartucho">
+            <span className="label">SKIN</span>
+            {SKIN_IDS.map((id) => (
+                <button
+                    key={id}
+                    type="button"
+                    className={`swatch ${SWATCH_CLASS[id]}${
+                        id === skin ? " active" : ""
+                    }`}
+                    aria-pressed={id === skin}
+                    onClick={() => onSkinChange(id)}
+                >
+                    <span className="dot" aria-hidden="true" />
+                    {SKIN_LABELS[id]}
+                </button>
+            ))}
         </div>
     );
 }

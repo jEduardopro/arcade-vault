@@ -27,8 +27,9 @@ it; it is not `@`-imported either.
 The README specifies a **spec-driven workflow**: a feature is designed as
 `specs/NN-slug.md` with `/spec` — or with `/add-game` when it is a new cartridge — and only
 then built with `/spec-impl`, following the conventions of
-[Klerith/fernando-skills](https://github.com/Klerith/fernando-skills). Nine specs are
-written and implemented, and `specs/` is the record of why the code looks the way it does:
+[Klerith/fernando-skills](https://github.com/Klerith/fernando-skills). Ten specs are
+written; nine are fully implemented and SPEC 10 only for ASTEROIDES, because the other
+three engines have no palettes yet. `specs/` is the record of why the code looks the way it does:
 when a convention below cites a SPEC number, that file is the long version. Prefer
 writing or updating a spec before implementing a feature.
 
@@ -152,9 +153,10 @@ audits which cartridges already have them, measures each colour against a WCAG c
 because the Vault is dark-only, and writes `app/lib/engines/<game>/skins.ts` plus its own
 record in `references/game-skins.md`. It is the only agent that writes code, and the boundary
 is sharp: palettes yes, `engine.ts`, `entities.ts`, any `.tsx` and `app/globals.css` never. The
-seam that feeds a palette to a frame does not exist yet, so on its first run it leaves a
-`Draft` spec for it and stops; that spec is what will finally use the `.gp-themer` swatches the
-port has been carrying since SPEC 01. It has no Supabase tool: a skin is not catalogue data.
+seam that feeds a palette to a frame did not exist on its first run, so it left a `Draft` spec
+for it and stopped; that spec is SPEC 10, now built for ASTEROIDES, and it is what finally uses
+the `.gp-themer` swatches the port has been carrying since SPEC 01. It has no Supabase tool: a
+skin is not catalogue data.
 
 Agents are **not** vendored the way the skills are: there is no `npx skills` equivalent and
 no upstream to track, so the files live directly under `.claude/agents/` and are committed —
@@ -301,6 +303,25 @@ a fresh clone gets them with no symlink to explain.
   player's first gesture, and `destroy()` silences them. **Platform audio is still unbuilt**:
   there is no remembered mute, no control in `PlayerShell`, and ASTEROIDES, CAÍDA and SNAKE
   stay silent. Adding those is its own spec; do not grow the shell's props for it here.
+- **A skin is a palette handed to `draw()` (SPEC 10).** `app/lib/skins.ts` closes the set
+  of ids at three — `clasico`, `neon`, `retro` — and each engine's own
+  `app/lib/engines/<game>/skins.ts` says what they paint; the shapes differ per engine on
+  purpose and are never harmonised. `clasico` is a byte-for-byte copy of that engine's
+  `PALETTE`, so the default changes nothing on screen. The seam is built for ASTEROIDES
+  only: `createAsteroidsEngine(canvas, callbacks, skin)` takes a third parameter defaulting
+  to `DEFAULT_SKIN`, every `draw(ctx, palette)` receives the table instead of importing it,
+  and `setSkin()` on the handle repaints a **live** engine — never re-create the engine on a
+  skin change, it costs the run. The preference is `app/lib/skin-store.tsx` over
+  `localStorage["av_skin"]`, the same `useSyncExternalStore` shape as `app/lib/session.tsx`,
+  and its server snapshot must stay `DEFAULT_SKIN` or the first client render disagrees with
+  the server's. The palettes themselves are the `skin-designer` agent's, not this file's.
+- **The skin selector is shell chrome, and it is opt-in.** `player-shell.tsx` renders
+  `.gp-themer` only when a cartridge passes both `skin` and `onSkinChange`, so the three
+  engines without palettes and the four ids still on `fake-game-player.tsx` show no control
+  instead of swatches that paint nothing. Its class names map `clasico → .neon`,
+  `neon → .vapor`, `retro → .cabinet`: those are the port's names, not skin ids, and
+  `app/globals.css` is a literal port that must not be renamed — so the mapping lives in the
+  component.
 - **A game is plugged in at `app/components/game-registry.ts`.** `GAME_ENGINES` maps a
   `Game["id"]` to its component, lazily via `next/dynamic` with `ssr: false` (a canvas game
   has nothing to render on the server). `game-player.tsx` is only the dispatcher: a
