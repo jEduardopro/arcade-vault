@@ -25,6 +25,8 @@ import {
     type GameStatus,
 } from "@/app/lib/engines/bloque-buster/engine";
 import type { Game } from "@/app/lib/games";
+import { useSkin } from "@/app/lib/skin-store";
+import type { SkinId } from "@/app/lib/skins";
 
 // What the first paint shows, before the engine's own restart() reports in.
 const INITIAL: GameSnapshot = {
@@ -105,20 +107,39 @@ export default function BloqueBusterGame({ game }: { game: Game }) {
     const [snapshot, setSnapshot] = useState<GameSnapshot>(INITIAL);
     const [status, setStatus] = useState<GameStatus>("ready");
 
+    const [skin, setSkin] = useSkin();
+    const skinRef = useRef<SkinId>(skin);
+
     const needsKeyboard = useSyncExternalStore(
         subscribeToPointer,
         getPointerSnapshot,
         getPointerServerSnapshot,
     );
 
+    // Declared before the mount effect on purpose: effects run in declaration
+    // order, so on mount this one fills skinRef before the engine is built and
+    // the very first frame is already painted in the stored skin.
+    //
+    // `skin` is deliberately NOT in the mount effect's dependencies below. If
+    // it were, picking a skin would destroy and rebuild the engine, which costs
+    // the run in progress — and in StrictMode it would do it twice.
+    useEffect(() => {
+        skinRef.current = skin;
+        engineRef.current?.setSkin(skin);
+    }, [skin]);
+
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
 
-        const engine = createBloqueBusterEngine(canvas, {
-            snapshot: setSnapshot,
-            status: setStatus,
-        });
+        const engine = createBloqueBusterEngine(
+            canvas,
+            {
+                snapshot: setSnapshot,
+                status: setStatus,
+            },
+            skinRef.current,
+        );
         engineRef.current = engine;
 
         // Cleanup is what keeps StrictMode's double mount from leaving two
@@ -152,6 +173,8 @@ export default function BloqueBusterGame({ game }: { game: Game }) {
             onTogglePause={togglePause}
             onEnd={end}
             onRestart={restart}
+            skin={skin}
+            onSkinChange={setSkin}
         >
             <canvas
                 ref={canvasRef}

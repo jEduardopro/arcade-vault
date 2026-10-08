@@ -9,18 +9,24 @@
 // and it has a gate with a net: onReady fires on `error` too, so a 404 costs
 // the sprite and never the game.
 
-import { PALETTE, SHEET } from "./constants";
+import { SHEET } from "./constants";
 import { foodBox } from "./entities";
+import type { Palette } from "./skins";
 
 export type FruitSheet = {
     /** true once the sheet loaded. When false, draw() paints the vector fruit. */
     readonly ready: boolean;
-    /** Paints fruit `slot` centred on (cx, cy), in world coordinates. */
+    /**
+     * Paints fruit `slot` centred on (cx, cy), in world coordinates. The
+     * palette only reaches the vector fallback: the sprite is a PNG and is
+     * drawn as it is in every skin.
+     */
     draw(
         ctx: CanvasRenderingContext2D,
         slot: number,
         cx: number,
         cy: number,
+        palette: Palette,
     ): void;
     destroy(): void;
 };
@@ -62,9 +68,9 @@ export function createFruitSheet(onReady: () => void): FruitSheet {
             return loaded;
         },
 
-        draw(ctx, slot, cx, cy) {
+        draw(ctx, slot, cx, cy, palette) {
             if (!loaded) {
-                drawVectorFruit(ctx, cx, cy);
+                drawVectorFruit(ctx, cx, cy, palette);
                 return;
             }
 
@@ -96,17 +102,19 @@ export function createFruitSheet(onReady: () => void): FruitSheet {
 /**
  * The fallback: the magenta core the cover-snake art draws, which is also what
  * the catalogue copy promised before this cartridge had sprites. The game
- * plays exactly the same; only the pixels change.
+ * plays exactly the same; only the pixels change. Colour and bloom come from
+ * the active skin — in clasico, --magenta at a blur of 14, as always.
  */
 function drawVectorFruit(
     ctx: CanvasRenderingContext2D,
     cx: number,
     cy: number,
+    palette: Palette,
 ): void {
     ctx.save();
-    ctx.shadowColor = PALETTE.halo;
-    ctx.shadowBlur = 14;
-    ctx.fillStyle = PALETTE.halo;
+    ctx.shadowColor = palette.halo;
+    ctx.shadowBlur = palette.glow.fruit;
+    ctx.fillStyle = palette.halo;
     ctx.beginPath();
     ctx.arc(cx, cy, 12, 0, Math.PI * 2);
     ctx.fill();

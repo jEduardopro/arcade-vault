@@ -25,7 +25,7 @@ import type { SkinId } from "@/app/lib/skins";
  * Blur radius, in canvas units, for each drawable. Today ASTEROIDES sets no
  * shadowBlur at all, so `clasico` is all zeros and changes nothing on screen;
  * the bloom is what `neon` is defined by, and `retro` carries the small halo a
- * phosphor tube has. Nothing reads these until the wiring spec lands.
+ * phosphor tube has. entities.ts reads them through the palette (SPEC 10).
  */
 export type Glow = {
     ship: number;

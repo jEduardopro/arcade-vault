@@ -70,10 +70,6 @@ export const EXPLOSION_STYLE = { grow: 1.6, lineWidth: 2 } as const;
  * same drawing SPEC 07 ported for CAÍDA. */
 export const BLOCK_STYLE = { inset: 1, highlightHeight: 4 } as const;
 
-/** Neon bloom, in px of shadowBlur. What makes the vector shapes read as
- * arcade without a single pixel of image. */
-export const GLOW = { paddle: 14, ball: 10, block: 6 } as const;
-
 /**
  * The two effects of the original, copied byte for byte into public/. They are
  * the only binary assets any cartridge of the Vault loads.
@@ -211,6 +207,13 @@ export const LEVELS: readonly (readonly BlockSpec[])[] = (() => {
 //
 // The pastel sprites of the original are gone: the seven colour names map onto
 // seven distinguishable accent tokens, none repeated.
+//
+// Since SPEC 10 nothing paints from here: the loop draws with the palette of
+// the chosen skin, and `clasico` in skins.ts is this table copied value for
+// value. It is kept as the reference that copy is checked against — a value in
+// `clasico` that differs from one below is a bug, not a decision. The neon
+// bloom radii that used to sit beside it as GLOW (paddle 14, ball 10, block 6)
+// now live in each skin's `glow` block, `clasico` holding those same numbers.
 export const PALETTE = {
     bg: "#0a0a0f", // --bg, the floor of the world
     paddle: "#00f5ff", // --cyan

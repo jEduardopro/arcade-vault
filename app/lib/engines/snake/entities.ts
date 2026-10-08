@@ -3,8 +3,14 @@
 // Every draw() takes the context as a parameter and none of them writes a
 // single character of text: the HUD belongs to PlayerShell, which is rule 2 of
 // the engine contract of SPEC 05.
+//
+// Since SPEC 10 every draw() takes the palette too: a piece does not look its
+// colours up, they are handed to it, exactly as ctx already was. `clasico` is
+// a byte-for-byte copy of PALETTE in constants.ts, so the default still paints
+// what this file painted before skins existed.
 
-import { FOOD_DRAW, GRID, PALETTE, TURN_QUEUE_MAX } from "./constants";
+import { FOOD_DRAW, GRID, TURN_QUEUE_MAX } from "./constants";
+import type { Palette } from "./skins";
 
 // ── Grid coordinates ─────────────────────────────────────────────────────────
 
@@ -60,6 +66,20 @@ function withGlow(
     ctx.restore();
 }
 
+/**
+ * A `#rrggbb` colour of the palette at the given alpha, as an rgba() string.
+ * It is what lets the fruit halo fade out in whichever skin is active instead
+ * of a hand-written magenta: for clasico's #ff006e it yields exactly the
+ * "rgba(255, 0, 110, 0.35)" and "rgba(255, 0, 110, 0)" the halo used before.
+ */
+function withAlpha(hex: string, alpha: number): string {
+    const value = parseInt(hex.slice(1, 7), 16);
+    const r = (value >> 16) & 0xff;
+    const g = (value >> 8) & 0xff;
+    const b = value & 0xff;
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 /** Top-left pixel of a cell. */
 function originOf(cell: Cell): { x: number; y: number } {
     return { x: cell.col * GRID.cell, y: cell.row * GRID.cell };
@@ -69,14 +89,17 @@ function originOf(cell: Cell): { x: number; y: number } {
 
 /** The floor and its lines. Drawn first, every frame, and nothing else clears
  * the canvas: this fill is what wipes the previous one. */
-export function drawGrid(ctx: CanvasRenderingContext2D): void {
+export function drawGrid(
+    ctx: CanvasRenderingContext2D,
+    palette: Palette,
+): void {
     const w = GRID.cols * GRID.cell;
     const h = GRID.rows * GRID.cell;
 
-    ctx.fillStyle = PALETTE.bg;
+    ctx.fillStyle = palette.bg;
     ctx.fillRect(0, 0, w, h);
 
-    ctx.strokeStyle = PALETTE.grid;
+    ctx.strokeStyle = palette.grid;
     ctx.lineWidth = 1;
     ctx.beginPath();
     // Half-pixel offsets, or a 1 px line straddles two rows of pixels and blurs.
@@ -176,12 +199,22 @@ export class Snake {
         return this.segments.some((segment) => sameCell(segment, cell));
     }
 
-    draw(ctx: CanvasRenderingContext2D): void {
+    draw(ctx: CanvasRenderingContext2D, palette: Palette): void {
         // Back to front, so the head ends up painted over its neighbour.
         for (let i = this.segments.length - 1; i > 0; i--) {
-            this.paintSegment(ctx, this.segments[i], PALETTE.body, 0);
+            this.paintSegment(
+                ctx,
+                this.segments[i],
+                palette.body,
+                palette.glow.body,
+            );
         }
-        this.paintSegment(ctx, this.segments[0], PALETTE.head, 12);
+        this.paintSegment(
+            ctx,
+            this.segments[0],
+            palette.head,
+            palette.glow.head,
+        );
     }
 
     private headAfterTurn(): { cell: Cell; direction: Direction } {
@@ -218,7 +251,9 @@ export class Snake {
 
 /**
  * What Food needs in order to paint itself. sprites.ts's FruitSheet satisfies
- * it structurally, so this file never has to know that an image exists.
+ * it structurally, so this file never has to know that an image exists. The
+ * palette travels with the call because the vector fallback is painted in it;
+ * the sprite itself is a PNG and no skin recolours it.
  */
 export type FoodPainter = {
     draw(
@@ -226,6 +261,7 @@ export type FoodPainter = {
         slot: number,
         cx: number,
         cy: number,
+        palette: Palette,
     ): void;
 };
 
@@ -245,19 +281,25 @@ export class Food {
         this.slot = Math.floor(rng() * slots);
     }
 
-    draw(ctx: CanvasRenderingContext2D, painter: FoodPainter): void {
+    draw(
+        ctx: CanvasRenderingContext2D,
+        painter: FoodPainter,
+        palette: Palette,
+    ): void {
         const { x, y } = originOf(this.cell);
         const cx = x + GRID.cell / 2;
         const cy = y + GRID.cell / 2;
 
-        // The magenta halo, which is also what the cover-snake art draws.
+        // The halo, magenta in clasico, which is also what the cover-snake art
+        // draws. Both stops derive from palette.halo at the alphas they always
+        // had, so the fruit glows in the active skin's colour.
         const halo = ctx.createRadialGradient(cx, cy, 0, cx, cy, GRID.cell / 2);
-        halo.addColorStop(0, "rgba(255, 0, 110, 0.35)");
-        halo.addColorStop(1, "rgba(255, 0, 110, 0)");
+        halo.addColorStop(0, withAlpha(palette.halo, 0.35));
+        halo.addColorStop(1, withAlpha(palette.halo, 0));
         ctx.fillStyle = halo;
         ctx.fillRect(x, y, GRID.cell, GRID.cell);
 
-        painter.draw(ctx, this.slot, cx, cy);
+        painter.draw(ctx, this.slot, cx, cy, palette);
     }
 }
 
