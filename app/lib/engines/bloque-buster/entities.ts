@@ -17,7 +17,10 @@
 //     notion of: it is a flag inside "playing", not a fifth GameStatus.
 //
 // The block face is the drawBlock() SPEC 07 ported for CAÍDA, stretched to the
-// 64x24 of this game. Only the colours change, and they come from PALETTE.
+// 64x24 of this game. Only the colours change, and since SPEC 10 they come from
+// the palette handed to draw(ctx, palette) — the skin the player picked — and
+// not from a module constant. `clasico` is a byte-for-byte copy of PALETTE, so
+// the default still paints what it painted before.
 
 import {
     BALL,
@@ -28,12 +31,11 @@ import {
     BLOCKS_ORIGIN,
     EXPLOSION_DURATION,
     EXPLOSION_STYLE,
-    GLOW,
     LEVELS,
     PADDLE,
-    PALETTE,
     WORLD,
 } from "@/app/lib/engines/bloque-buster/constants";
+import type { Palette } from "@/app/lib/engines/bloque-buster/skins";
 
 // Re-exported so the rest of the engine imports the block types from here, as
 // SPEC 08 section 3.3 describes. They are declared in constants.ts because
@@ -96,12 +98,12 @@ export class Paddle {
         this.x = clamp(centreX - this.w / 2, 0, WORLD.w - this.w);
     }
 
-    draw(ctx: CanvasRenderingContext2D) {
-        withGlow(ctx, PALETTE.paddle, GLOW.paddle, () => {
-            ctx.fillStyle = PALETTE.paddle;
+    draw(ctx: CanvasRenderingContext2D, palette: Palette) {
+        withGlow(ctx, palette.paddle, palette.glow.paddle, () => {
+            ctx.fillStyle = palette.paddle;
             ctx.fillRect(this.x, this.y, this.w, this.h);
         });
-        ctx.fillStyle = PALETTE.highlight;
+        ctx.fillStyle = palette.highlight;
         ctx.fillRect(this.x, this.y, this.w, BLOCK_STYLE.highlightHeight);
     }
 }
@@ -168,10 +170,10 @@ export class Ball {
         this.vy = -speed * Math.cos(angle);
     }
 
-    draw(ctx: CanvasRenderingContext2D) {
+    draw(ctx: CanvasRenderingContext2D, palette: Palette) {
         const radius = this.size / 2;
-        withGlow(ctx, PALETTE.ball, GLOW.ball, () => {
-            ctx.fillStyle = PALETTE.ball;
+        withGlow(ctx, palette.ball, palette.glow.ball, () => {
+            ctx.fillStyle = palette.ball;
             ctx.beginPath();
             ctx.arc(this.x + radius, this.y + radius, radius, 0, Math.PI * 2);
             ctx.fill();
@@ -220,19 +222,19 @@ export class Block {
         return overlapX < overlapY ? "x" : "y";
     }
 
-    draw(ctx: CanvasRenderingContext2D) {
+    draw(ctx: CanvasRenderingContext2D, palette: Palette) {
         if (!this.alive) return;
 
-        const color = PALETTE.blocks[this.color];
+        const color = palette.blocks[this.color];
         const { inset, highlightHeight } = BLOCK_STYLE;
         const w = this.w - inset * 2;
         const h = this.h - inset * 2;
 
-        withGlow(ctx, color, GLOW.block, () => {
+        withGlow(ctx, color, palette.glow.block, () => {
             ctx.fillStyle = color;
             ctx.fillRect(this.x + inset, this.y + inset, w, h);
         });
-        ctx.fillStyle = PALETTE.highlight;
+        ctx.fillStyle = palette.highlight;
         ctx.fillRect(this.x + inset, this.y + inset, w, highlightHeight);
     }
 }
@@ -251,7 +253,12 @@ export class Explosion {
     private readonly y: number;
     private readonly w: number;
     private readonly h: number;
-    private readonly color: string;
+    /**
+     * The colour *name* of the block that died, not its colour. It is resolved
+     * against the palette in draw(), so a skin change mid-flash repaints the
+     * outline instead of leaving a stale frame in the previous skin.
+     */
+    private readonly color: BlockColor;
 
     elapsed = 0;
 
@@ -260,7 +267,7 @@ export class Explosion {
         this.y = block.y;
         this.w = block.w;
         this.h = block.h;
-        this.color = PALETTE.blocks[block.color];
+        this.color = block.color;
     }
 
     done(): boolean {
@@ -271,7 +278,8 @@ export class Explosion {
         this.elapsed += dt;
     }
 
-    draw(ctx: CanvasRenderingContext2D) {
+    draw(ctx: CanvasRenderingContext2D, palette: Palette) {
+        const color = palette.blocks[this.color];
         const t = Math.min(1, this.elapsed / EXPLOSION_DURATION);
         const scale = 1 + (EXPLOSION_STYLE.grow - 1) * t;
         const w = this.w * scale;
@@ -281,9 +289,10 @@ export class Explosion {
 
         ctx.save();
         ctx.globalAlpha = 1 - t;
-        ctx.shadowColor = this.color;
-        ctx.shadowBlur = GLOW.block;
-        ctx.strokeStyle = this.color;
+        ctx.shadowColor = color;
+        // The block's own bloom, as it reused GLOW.block before SPEC 10.
+        ctx.shadowBlur = palette.glow.block;
+        ctx.strokeStyle = color;
         ctx.lineWidth = EXPLOSION_STYLE.lineWidth;
         ctx.strokeRect(x, y, w, h);
         ctx.restore();

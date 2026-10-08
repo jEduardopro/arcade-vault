@@ -34,7 +34,9 @@ import {
     sameCell,
     Snake,
 } from "@/app/lib/engines/snake/entities";
+import { SKINS, type Palette } from "@/app/lib/engines/snake/skins";
 import { createFruitSheet } from "@/app/lib/engines/snake/sprites";
+import { DEFAULT_SKIN, type SkinId } from "@/app/lib/skins";
 
 /**
  * What the player sees the game doing.
@@ -63,6 +65,12 @@ export type EngineHandle = {
     end(): void;
     /** Back to "ready", with a fresh board drawn behind the start overlay. */
     restart(): void;
+    /**
+     * Repaints in another skin without touching the run: no reset, no lost
+     * score, no pause. The mounting component calls it instead of rebuilding
+     * the engine, which would cost the game in progress.
+     */
+    setSkin(next: SkinId): void;
     /** Cancels the loop and removes every listener. Always call it. */
     destroy(): void;
 };
@@ -96,6 +104,7 @@ const MAX_DPR = 2;
 export function createSnakeEngine(
     canvas: HTMLCanvasElement,
     on: EngineCallbacks,
+    skin: SkinId = DEFAULT_SKIN,
 ): EngineHandle {
     const context = canvas.getContext("2d");
     if (!context) throw new Error("2D canvas context unavailable");
@@ -104,6 +113,12 @@ export function createSnakeEngine(
     const ctx = context;
 
     // ── State ────────────────────────────────────────────────────────────────
+
+    // The only piece of the skin the loop knows about: a colour table handed
+    // down to every draw(), swapped whole by setSkin(). Nothing else in the
+    // engine is aware that skins exist. Declared before the fruit sheet below,
+    // because a cached sheet can resolve synchronously and every draw reads it.
+    let palette: Palette = SKINS[skin];
 
     let snake = newSnake();
     const food = new Food();
@@ -285,10 +300,11 @@ export function createSnakeEngine(
     // ── Draw ─────────────────────────────────────────────────────────────────
 
     function draw() {
-        drawGrid(ctx);
+        // drawGrid's floor fill is the frame clear, so it takes the palette too.
+        drawGrid(ctx, palette);
         // Fruit first, so the head paints over it on the frame it is eaten.
-        food.draw(ctx, sheet);
-        snake.draw(ctx);
+        food.draw(ctx, sheet, palette);
+        snake.draw(ctx, palette);
     }
 
     // ── Loop ─────────────────────────────────────────────────────────────────
@@ -402,6 +418,16 @@ export function createSnakeEngine(
             lastSnapshot = null;
             emitSnapshot();
             draw();
+        },
+
+        setSkin(next: SkinId) {
+            palette = SKINS[next];
+            // While the loop runs the next frame repaints on its own. With it
+            // stopped — ready, paused, over — the frame on screen is frozen,
+            // so the new colours need an explicit repaint to show up. The
+            // loading gate is untouched: before the sheet resolves this paints
+            // the vector fallback, exactly as the "ready" board already does.
+            if (rafId === null) draw();
         },
 
         destroy() {
